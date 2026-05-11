@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch } from '../src/core.mjs';
+import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult } from '../src/core.mjs';
 
 describe('encodeBookmarklet', () => {
   test('wraps body with javascript: prefix and void(0); suffix', () => {
@@ -240,5 +240,37 @@ describe('gateCrunch', () => {
     class FakeDecimal { constructor(s) { this.value = s; } }
     const fakeGip = { gte: function(t) { return t instanceof FakeDecimal && t.value === '1e500'; } };
     expect(gateCrunch('1e500', () => fakeGip, FakeDecimal)).toBe(true);
+  });
+});
+
+describe('updateIpMult', () => {
+  test('sample.count null returns prev unchanged', () => {
+    const prev = { count: 5, amount: '1e60' };
+    const next = updateIpMult(prev, { count: null, amount: '1e60' });
+    expect(next).toEqual({ count: 5, amount: '1e60', scaled: false });
+  });
+
+  test('first observation (prev.count null) records baseline, no scale', () => {
+    const next = updateIpMult(
+      { count: null, amount: '1e60' },
+      { count: 5, amount: '1e60' }
+    );
+    expect(next).toEqual({ count: 5, amount: '1e60', scaled: false });
+  });
+
+  test('unchanged count is a no-op', () => {
+    const next = updateIpMult(
+      { count: 5, amount: '1e60' },
+      { count: 5, amount: '1e60' }
+    );
+    expect(next).toEqual({ count: 5, amount: '1e60', scaled: false });
+  });
+
+  test('decreased count records the drop without scaling', () => {
+    const next = updateIpMult(
+      { count: 5, amount: '1e60' },
+      { count: 2, amount: '1e60' }
+    );
+    expect(next).toEqual({ count: 2, amount: '1e60', scaled: false });
   });
 });

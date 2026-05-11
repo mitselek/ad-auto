@@ -84,3 +84,14 @@ export function parseDecimalLike(s, DecimalCtor) {
   if (!Number.isFinite(n)) return null;
   return n;
 }
+
+export function updateIpMult(prev, sample, DecimalCtor) {
+  if (sample == null || sample.count == null) {
+    return { count: prev.count, amount: prev.amount, scaled: false };
+  }
+  if (prev.count == null || sample.count <= prev.count) {
+    return { count: sample.count, amount: prev.amount, scaled: false };
+  }
+  // sample.count > prev.count — scaling path is added in a later task.
+  return { count: sample.count, amount: prev.amount, scaled: false };
+}
