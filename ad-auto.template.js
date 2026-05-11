@@ -29,6 +29,9 @@
       else if (typeof saved.amount === 'number') config[n].amount = saved.amount;
     }
   }
+  let lastIpMultCount = (stored && typeof stored.lastIpMultCount === 'number')
+    ? stored.lastIpMultCount
+    : null;
   let currentTab = null;
   function saveSettings() {
     try {
@@ -43,6 +46,7 @@
           left: panel.style.left || null,
           top:  panel.style.top  || null,
         },
+        lastIpMultCount,
       }));
     } catch {}
   }
@@ -136,6 +140,7 @@
   const peakProbes = {
     gip: ['gainedInfinityPoints'],
     tMs: ['player.records.thisInfinity.time'],
+    ipMult: ['InfinityUpgrade.ipMult.purchaseCount'],
   };
   let peak = { rate: null, ip: null, lastTMs: null };
   const startedAt = performance.now();
@@ -163,6 +168,27 @@
     const tMs = resolveRaw(peakProbes.tMs);
     const gip = resolveRaw(peakProbes.gip);
     peak = updatePeak(peak, { gip, tMs });
+
+    const ipMultCount = resolveRaw(peakProbes.ipMult);
+    const result = updateIpMult(
+      { count: lastIpMultCount, amount: config.crunch.amount },
+      { count: ipMultCount, amount: config.crunch.amount },
+      window.Decimal,
+    );
+    if (result.count !== lastIpMultCount || result.scaled) {
+      lastIpMultCount = result.count;
+      if (result.scaled) {
+        config.crunch.amount = result.amount;
+        const input = panel.querySelector('input[data-name="crunch"][data-prop="amount"]');
+        if (input) input.value = result.amount;
+        const row = rowEls.crunch;
+        if (row) {
+          row.classList.add('flash');
+          setTimeout(() => row.classList.remove('flash'), 600);
+        }
+      }
+      saveSettings();
+    }
   }, 250);
 
   const PID = '__auto_panel';
@@ -214,7 +240,7 @@
       #${PID} .peak-row:hover{background:rgba(255,255,255,0.04)}
       #${PID} .peak-row .peak-rate{text-align:center;font-variant-numeric:tabular-nums}
       #${PID} .peak-row .peak-ip{text-align:right;color:#888;font-size:10px;font-variant-numeric:tabular-nums}
-      #${PID} .peak-row.flash{background:rgba(120,200,120,0.22)}
+      #${PID} .row.flash{background:rgba(120,200,120,0.22)}
     </style>
     <div class="head">
       <div class="title">auto</div>
