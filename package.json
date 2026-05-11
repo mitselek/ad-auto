@@ -1,0 +1,15 @@
+{
+  "name": "ad-auto",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Antimatter Dimensions console auto-buy helper.",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}
