@@ -189,6 +189,33 @@
       }
       saveSettings();
     }
+
+    if (peak.ip != null) {
+      const cur = config.crunch.amount;
+      let shouldUpdate = false;
+      if (cur == null || cur === '') {
+        shouldUpdate = true;
+      } else if (typeof window.Decimal === 'function') {
+        try {
+          const prev = new window.Decimal(cur);
+          shouldUpdate = peak.ip.gt(prev);
+        } catch {
+          shouldUpdate = false;
+        }
+      }
+      if (shouldUpdate) {
+        const s = (typeof peak.ip.toString === 'function') ? peak.ip.toString() : String(peak.ip);
+        config.crunch.amount = s;
+        const input = panel.querySelector('input[data-name="crunch"][data-prop="amount"]');
+        if (input) input.value = s;
+        const row = rowEls.crunch;
+        if (row) {
+          row.classList.add('flash');
+          setTimeout(() => row.classList.remove('flash'), 600);
+        }
+        saveSettings();
+      }
+    }
   }, 250);
 
   const PID = '__auto_panel';
