@@ -175,7 +175,7 @@
       { count: ipMultCount, amount: config.crunch.amount },
       window.Decimal,
     );
-    if (result.count !== lastIpMultCount || result.scaled) {
+    if (result.count !== lastIpMultCount) {
       lastIpMultCount = result.count;
       if (result.scaled) {
         config.crunch.amount = result.amount;
