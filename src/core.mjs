@@ -92,6 +92,8 @@ export function updateIpMult(prev, sample, DecimalCtor) {
   if (prev.count == null || sample.count <= prev.count) {
     return { count: sample.count, amount: prev.amount, scaled: false };
   }
-  // sample.count > prev.count — scaling path is added in a later task.
-  return { count: sample.count, amount: prev.amount, scaled: false };
+  const delta = sample.count - prev.count;
+  const factor = new DecimalCtor(2).pow(delta);
+  const newAmount = new DecimalCtor(sample.amount).times(factor).toString();
+  return { count: sample.count, amount: newAmount, scaled: true };
 }

@@ -244,6 +244,24 @@ describe('gateCrunch', () => {
 });
 
 describe('updateIpMult', () => {
+  class FakeDecimal {
+    constructor(s) {
+      if (s === 'BOOM') throw new Error('boom');
+      this._chain = String(s);
+    }
+    times(other) {
+      const next = new FakeDecimal('placeholder');
+      next._chain = `(${this._chain})*(${other._chain})`;
+      return next;
+    }
+    pow(n) {
+      const next = new FakeDecimal('placeholder');
+      next._chain = `(${this._chain})^${n}`;
+      return next;
+    }
+    toString() { return this._chain; }
+  }
+
   test('sample.count null returns prev unchanged', () => {
     const prev = { count: 5, amount: '1e60' };
     const next = updateIpMult(prev, { count: null, amount: '1e60' });
@@ -272,5 +290,27 @@ describe('updateIpMult', () => {
       { count: 2, amount: '1e60' }
     );
     expect(next).toEqual({ count: 2, amount: '1e60', scaled: false });
+  });
+
+  test('+1 delta with parseable amount scales by 2', () => {
+    const next = updateIpMult(
+      { count: 5, amount: '1e60' },
+      { count: 6, amount: '1e60' },
+      FakeDecimal
+    );
+    expect(next.count).toBe(6);
+    expect(next.scaled).toBe(true);
+    expect(next.amount).toBe('(1e60)*((2)^1)');
+  });
+
+  test('+3 delta passes delta through to .pow', () => {
+    const next = updateIpMult(
+      { count: 5, amount: '1e60' },
+      { count: 8, amount: '1e60' },
+      FakeDecimal
+    );
+    expect(next.count).toBe(8);
+    expect(next.scaled).toBe(true);
+    expect(next.amount).toBe('(1e60)*((2)^3)');
   });
 });
