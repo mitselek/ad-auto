@@ -313,4 +313,39 @@ describe('updateIpMult', () => {
     expect(next.scaled).toBe(true);
     expect(next.amount).toBe('(1e60)*((2)^3)');
   });
+
+  test('+1 delta with null amount advances count, does not scale', () => {
+    const next = updateIpMult(
+      { count: 5, amount: null },
+      { count: 6, amount: null },
+      FakeDecimal
+    );
+    expect(next).toEqual({ count: 6, amount: null, scaled: false });
+  });
+
+  test('+1 delta with empty-string amount advances count, does not scale', () => {
+    const next = updateIpMult(
+      { count: 5, amount: '' },
+      { count: 6, amount: '' },
+      FakeDecimal
+    );
+    expect(next).toEqual({ count: 6, amount: '', scaled: false });
+  });
+
+  test('+1 delta with undefined DecimalCtor advances count, does not scale', () => {
+    const next = updateIpMult(
+      { count: 5, amount: '1e60' },
+      { count: 6, amount: '1e60' }
+    );
+    expect(next).toEqual({ count: 6, amount: '1e60', scaled: false });
+  });
+
+  test('+1 delta where DecimalCtor throws on construction advances count, does not scale', () => {
+    const next = updateIpMult(
+      { count: 5, amount: 'BOOM' },
+      { count: 6, amount: 'BOOM' },
+      FakeDecimal
+    );
+    expect(next).toEqual({ count: 6, amount: 'BOOM', scaled: false });
+  });
 });

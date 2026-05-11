@@ -93,7 +93,25 @@ export function updateIpMult(prev, sample, DecimalCtor) {
     return { count: sample.count, amount: prev.amount, scaled: false };
   }
   const delta = sample.count - prev.count;
-  const factor = new DecimalCtor(2).pow(delta);
-  const newAmount = new DecimalCtor(sample.amount).times(factor).toString();
+  const amount = sample.amount;
+  if (amount == null || amount === '') {
+    return { count: sample.count, amount, scaled: false };
+  }
+  if (typeof DecimalCtor !== 'function') {
+    return { count: sample.count, amount, scaled: false };
+  }
+  let factor, base;
+  try {
+    base = new DecimalCtor(amount);
+    factor = new DecimalCtor(2).pow(delta);
+  } catch {
+    return { count: sample.count, amount, scaled: false };
+  }
+  let newAmount;
+  try {
+    newAmount = base.times(factor).toString();
+  } catch {
+    return { count: sample.count, amount, scaled: false };
+  }
   return { count: sample.count, amount: newAmount, scaled: true };
 }
