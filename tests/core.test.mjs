@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult } from '../src/core.mjs';
+import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet } from '../src/core.mjs';
 
 describe('encodeBookmarklet', () => {
   test('wraps body with javascript: prefix and void(0); suffix', () => {
@@ -355,5 +355,63 @@ describe('updateIpMult', () => {
       FakeDecimal
     );
     expect(next).toEqual({ count: 6, amount: 'BOOM', scaled: false });
+  });
+});
+
+describe('isThresholdSet', () => {
+  class FakeDecimal {
+    constructor(s) {
+      if (s === 'BOOM') throw new Error('boom');
+      this._s = String(s);
+    }
+    gt(other) {
+      const n = Number(this._s);
+      const o = typeof other === 'object' && other !== null ? Number(other._s) : Number(other);
+      return n > o;
+    }
+  }
+
+  test('null returns false', () => {
+    expect(isThresholdSet(null)).toBe(false);
+  });
+
+  test('undefined returns false', () => {
+    expect(isThresholdSet(undefined)).toBe(false);
+  });
+
+  test('empty string returns false', () => {
+    expect(isThresholdSet('')).toBe(false);
+  });
+
+  test('whitespace string returns false', () => {
+    expect(isThresholdSet('   ')).toBe(false);
+  });
+
+  test('"0" returns false (shortcut)', () => {
+    expect(isThresholdSet('0')).toBe(false);
+  });
+
+  test('positive numeric string with DecimalCtor returns true', () => {
+    expect(isThresholdSet('1e60', FakeDecimal)).toBe(true);
+  });
+
+  test('negative numeric string with DecimalCtor returns false', () => {
+    expect(isThresholdSet('-1e60', FakeDecimal)).toBe(false);
+  });
+
+  test('unparseable string with throwing DecimalCtor returns false', () => {
+    expect(isThresholdSet('BOOM', FakeDecimal)).toBe(false);
+  });
+
+  test('positive numeric string without DecimalCtor returns true', () => {
+    expect(isThresholdSet('5')).toBe(true);
+  });
+
+  test('"0" without DecimalCtor returns false', () => {
+    expect(isThresholdSet('0')).toBe(false);
+  });
+
+  test('unparseable string without DecimalCtor returns false', () => {
+    expect(isThresholdSet('abc')).toBe(false);
   });
 });

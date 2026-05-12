@@ -111,3 +111,25 @@ export function updateIpMult(prev, sample, DecimalCtor) {
   }
   return { count: sample.count, amount: newAmount, scaled: true };
 }
+
+export function isThresholdSet(amount, DecimalCtor) {
+  if (amount == null) return false;
+  const s = String(amount).trim();
+  if (s === '') return false;
+  if (s === '0') return false;
+  if (typeof DecimalCtor !== 'function') {
+    const n = Number(s);
+    return Number.isFinite(n) && n > 0;
+  }
+  let parsed;
+  try {
+    parsed = new DecimalCtor(s);
+  } catch {
+    return false;
+  }
+  if (typeof parsed?.gt === 'function') {
+    try { return parsed.gt(0); } catch { return false; }
+  }
+  const n = Number(parsed);
+  return Number.isFinite(n) && n > 0;
+}
