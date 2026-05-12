@@ -33,6 +33,7 @@
   let lastIpMultCount = (stored && typeof stored.lastIpMultCount === 'number')
     ? stored.lastIpMultCount
     : null;
+  let crunchReadyAt = null;
   let currentTab = null;
   function saveSettings() {
     try {
@@ -151,6 +152,24 @@
     const now = performance.now();
     for (const [name, cfg] of Object.entries(config)) {
       if (!cfg.enabled) continue;
+      if (name === 'crunch' && isThresholdSet(cfg.amount, window.Decimal)) {
+        if (crunchReadyAt != null) {
+          if (now < crunchReadyAt) continue;
+          try {
+            dispatch('crunch');
+            stats.crunch.fires++;
+            lastRun.crunch = now;
+          } catch (e) {
+            stats.crunch.errs++;
+            if (stats.crunch.errs <= 2) console.warn('crunch', 'threw', e);
+          }
+          crunchReadyAt = null;
+          continue;
+        }
+        if (!gates.crunch(cfg)) continue;
+        crunchReadyAt = now + cfg.period;
+        continue;
+      }
       if (now - lastRun[name] < cfg.period) continue;
       if (gates[name] && !gates[name](cfg)) continue;
       try {
