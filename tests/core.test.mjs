@@ -165,25 +165,33 @@ describe('updatePeak', () => {
     expect(next).toEqual({ rate: 60, ip: 60, lastTMs: 60000 });
   });
 
-  test('run reset clears peak then applies the new sample', () => {
+  test('run reset preserves peak; lower-rate new sample does not displace it', () => {
     const next = updatePeak(
       { rate: 60, ip: 60, lastTMs: 9000 },
-      { gip: 5, tMs: 1000 }
+      { gip: 0.5, tMs: 1000 }
     );
-    // rate = 5 / (1000/60000) = 300
-    expect(next.rate).toBe(300);
-    expect(next.ip).toBe(5);
+    // new rate = 0.5 / (1000/60000) = 30, which is < 60 → peak survives
+    expect(next.rate).toBe(60);
+    expect(next.ip).toBe(60);
     expect(next.lastTMs).toBe(1000);
   });
 
-  test('run reset with tMs<1 clears peak and leaves rate null', () => {
+  test('run reset with tMs<1 preserves peak', () => {
     const next = updatePeak(
       { rate: 60, ip: 60, lastTMs: 9000 },
       { gip: 5, tMs: 0 }
     );
-    expect(next.rate).toBe(null);
-    expect(next.ip).toBe(null);
-    expect(next.lastTMs).toBe(0);
+    // computeRate returns null when tMs<1 → peak path skipped, peak unchanged
+    expect(next).toEqual({ rate: 60, ip: 60, lastTMs: 0 });
+  });
+
+  test('higher rate after run reset displaces peak', () => {
+    const next = updatePeak(
+      { rate: 60, ip: 60, lastTMs: 9000 },
+      { gip: 5, tMs: 1000 }
+    );
+    // new rate = 300, which is > 60 → peak updated to new sample
+    expect(next).toEqual({ rate: 300, ip: 5, lastTMs: 1000 });
   });
 
   test('null gip only updates lastTMs', () => {

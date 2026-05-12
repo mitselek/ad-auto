@@ -44,10 +44,6 @@ export function updatePeak(prev, sample) {
 
   if (tMs == null) return prev;
 
-  if (isRunReset(tMs, lastTMs)) {
-    peakRate = null;
-    peakIp = null;
-  }
   lastTMs = tMs;
 
   if (gip == null) return { rate: peakRate, ip: peakIp, lastTMs };
