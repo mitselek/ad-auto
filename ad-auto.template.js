@@ -85,8 +85,12 @@
   }
   function dispatch(name) {
     for (const p of handlerPaths[name] || []) {
-      const fn = resolveFn(p);
-      if (typeof fn === 'function') return fn();
+      const parts = p.split('.');
+      const fnName = parts.pop();
+      const receiver = parts.reduce((o, k) => (o == null ? o : o[k]), window);
+      if (receiver != null && typeof receiver[fnName] === 'function') {
+        return receiver[fnName]();
+      }
     }
     throw new Error(`[auto] no handler resolved for ${name}`);
   }
