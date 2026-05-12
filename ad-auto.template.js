@@ -16,6 +16,7 @@
 
   // @inline:core
   const STORAGE_KEY = '__auto_settings_v1';
+  const RATCHET_MIN_MULT = 1.001;
   const stored = (() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; }
   })();
@@ -202,7 +203,7 @@
       } else if (typeof window.Decimal === 'function') {
         try {
           const prev = new window.Decimal(cur);
-          shouldUpdate = peak.ip.gt(prev);
+          shouldUpdate = peak.ip.gt(prev.times(RATCHET_MIN_MULT));
         } catch {
           shouldUpdate = false;
         }
