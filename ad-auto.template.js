@@ -236,7 +236,7 @@
       #${PID}{position:fixed;left:12px;bottom:12px;z-index:999999;
         font-size:12px;background:rgba(20,20,28,.94);color:#e8e8ee;
         border:1px solid #444;border-radius:8px;padding:8px 10px;
-        min-width:340px;box-shadow:0 4px 16px rgba(0,0,0,.4);user-select:none}
+        min-width:380px;box-shadow:0 4px 16px rgba(0,0,0,.4);user-select:none}
       #${PID} .head{display:flex;align-items:center;gap:8px;cursor:move;
         padding-bottom:6px;border-bottom:1px solid #333;margin-bottom:6px}
       #${PID} .title{font-size:12px;font-weight:600;flex:1;color:#e8e8ee;line-height:1}
@@ -249,7 +249,7 @@
       #${PID} .tabs button.active{background:#4a4a68;border-color:#666}
       #${PID} .pane{display:none}
       #${PID} .pane.active{display:block}
-      #${PID} .row{display:grid;grid-template-columns:18px 1fr 56px 56px 56px;
+      #${PID} .row{display:grid;grid-template-columns:18px 1fr 56px 80px 56px;
         gap:8px;align-items:center;padding:3px 0}
       #${PID} .row.hdr{font-size:9px;color:#888;text-transform:uppercase;
         letter-spacing:.06em;padding:2px 0 4px;border-bottom:1px solid #2a2a32;margin-bottom:2px}
@@ -257,11 +257,11 @@
       #${PID} .row.hdr .lbl-hits{text-align:right}
       #${PID} .name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       #${PID} input[type=checkbox]{margin:0;cursor:pointer;width:14px;height:14px}
-      #${PID} input[type=number]{width:100%;background:#1a1a24;color:#e8e8ee;
+      #${PID} input[type=number],#${PID} input[type=text]{width:100%;background:#1a1a24;color:#e8e8ee;
         border:1px solid #333;border-radius:3px;padding:2px 4px;
         font-size:11px;font-family:inherit;text-align:right;line-height:1.2}
       #${PID} input[type=number]:disabled{opacity:.32;cursor:not-allowed}
-      #${PID} input[readonly]{opacity:.55;cursor:default;background:#15151c}
+      #${PID} input[readonly]{opacity:.85;cursor:default;background:#15151c;color:#cfcfd6}
       #${PID} .stats{font-variant-numeric:tabular-nums;color:#888;
         font-size:10px;text-align:right;line-height:1.2}
       #${PID} .stats.err{color:#e88}
