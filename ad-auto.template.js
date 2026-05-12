@@ -178,9 +178,13 @@
     if (result.count !== lastIpMultCount) {
       lastIpMultCount = result.count;
       if (result.scaled) {
-        config.crunch.amount = result.amount;
+        let formatted = result.amount;
+        if (typeof window.Decimal === 'function') {
+          try { formatted = new window.Decimal(result.amount).toExponential(2); } catch {}
+        }
+        config.crunch.amount = formatted;
         const input = panel.querySelector('input[data-name="crunch"][data-prop="amount"]');
-        if (input) input.value = result.amount;
+        if (input) input.value = formatted;
         const row = rowEls.crunch;
         if (row) {
           row.classList.add('flash');
@@ -204,7 +208,7 @@
         }
       }
       if (shouldUpdate) {
-        const s = (typeof peak.ip.toString === 'function') ? peak.ip.toString() : String(peak.ip);
+        const s = (typeof peak.ip.toExponential === 'function') ? peak.ip.toExponential(2) : String(peak.ip);
         config.crunch.amount = s;
         const input = panel.querySelector('input[data-name="crunch"][data-prop="amount"]');
         if (input) input.value = s;
@@ -268,6 +272,7 @@
       #${PID} .peak-row .peak-rate{text-align:center;font-variant-numeric:tabular-nums}
       #${PID} .peak-row .peak-ip{text-align:right;color:#888;font-size:10px;font-variant-numeric:tabular-nums}
       #${PID} .row.flash{background:rgba(120,200,120,0.22)}
+      #${PID} .row.peak-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0}
     </style>
     <div class="head">
       <div class="title">auto</div>
@@ -316,17 +321,14 @@
       pr.id = '__auto_peak_row';
       pr.title = 'click to copy IP-at-peak into crunch amount';
       pr.innerHTML = `
-        <span></span>
         <span class="name">Peak IP/min</span>
-        <span class="peak-rate">—</span>
-        <span class="peak-ip">—</span>
-        <span></span>
+        <span class="peak-value"><span class="peak-rate">—</span> at <span class="peak-ip">—</span></span>
       `;
       paneEls[cfg.tab].appendChild(pr);
     }
     const hasGate = name in gates;
     const amtType = name === 'crunch' ? 'text' : 'number';
-    const amtAttrs = name === 'crunch' ? '' : 'min="0" step="1"';
+    const amtAttrs = name === 'crunch' ? 'readonly' : 'min="0" step="1"';
     const row = document.createElement('div');
     row.className = 'row';
     row.innerHTML = `
@@ -359,8 +361,6 @@
     if (!name || !prop) return;
     if (t.type === 'checkbox') {
       config[name][prop] = t.checked;
-    } else if (name === 'crunch' && prop === 'amount') {
-      config[name][prop] = t.value.trim() === '' ? null : t.value.trim();
     } else if (t.type === 'number') {
       config[name][prop] = t.value === '' ? null : Number(t.value);
     }
@@ -372,7 +372,7 @@
       if (peak.ip == null) return;
       const input = panel.querySelector('input[data-name="crunch"][data-prop="amount"]');
       if (!input) return;
-      const s = (typeof peak.ip.toString === 'function') ? peak.ip.toString() : String(peak.ip);
+      const s = (typeof peak.ip.toExponential === 'function') ? peak.ip.toExponential(2) : String(peak.ip);
       input.value = s;
       config.crunch.amount = s;
       saveSettings();
@@ -461,8 +461,7 @@
     const peakRow = document.getElementById('__auto_peak_row');
     if (peakRow) {
       peakRow.querySelector('.peak-rate').textContent = fmtExp(peak.rate);
-      peakRow.querySelector('.peak-ip').textContent =
-        peak.ip == null ? '—' : '(at ' + fmtExp(peak.ip) + ')';
+      peakRow.querySelector('.peak-ip').textContent = fmtExp(peak.ip);
     }
     panel.querySelector('.uptime').textContent = Math.floor((now - startedAt) / 1000) + 's';
     const total = Object.values(stats).reduce((a, s) => a + s.fires, 0);
