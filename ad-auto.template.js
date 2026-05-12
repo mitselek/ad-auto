@@ -261,6 +261,7 @@
         border:1px solid #333;border-radius:3px;padding:2px 4px;
         font-size:11px;font-family:inherit;text-align:right;line-height:1.2}
       #${PID} input[type=number]:disabled{opacity:.32;cursor:not-allowed}
+      #${PID} input[readonly]{opacity:.55;cursor:default;background:#15151c}
       #${PID} .stats{font-variant-numeric:tabular-nums;color:#888;
         font-size:10px;text-align:right;line-height:1.2}
       #${PID} .stats.err{color:#e88}
@@ -269,8 +270,8 @@
       #${PID}.collapsed .body,#${PID}.collapsed .tabs,#${PID}.collapsed .foot{display:none}
       #${PID} .peak-row{cursor:pointer}
       #${PID} .peak-row:hover{background:rgba(255,255,255,0.04)}
-      #${PID} .peak-row .peak-rate{text-align:center;font-variant-numeric:tabular-nums}
-      #${PID} .peak-row .peak-ip{text-align:right;color:#888;font-size:10px;font-variant-numeric:tabular-nums}
+      #${PID} .peak-row .peak-rate{font-variant-numeric:tabular-nums}
+      #${PID} .peak-row .peak-ip{color:#888;font-size:10px;font-variant-numeric:tabular-nums}
       #${PID} .row.flash{background:rgba(120,200,120,0.22)}
       #${PID} .row.peak-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0}
     </style>
