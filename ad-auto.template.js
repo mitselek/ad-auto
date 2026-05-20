@@ -77,7 +77,7 @@
         while (target.canBeBought && safety-- > 0) target.purchase();
       };
       const RU = window.ReplicantiUpgrade;
-      if (RU == null) throw new Error('ReplicantiUpgrade missing');
+      if (RU == null) throw new Error('[auto] buyMaxReplUpgrades: ReplicantiUpgrade missing');
       buyToMax(RU.chance);
       buyToMax(RU.interval);
       buyToMax(RU.galaxies);
