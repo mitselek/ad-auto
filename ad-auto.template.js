@@ -7,10 +7,11 @@
     galaxy:    { tab: 'AD',       label: 'Galaxy',     enabled: true,  period: 50,   amount: null },
     sacrifice: { tab: 'AD',       label: 'Sacrifice',  enabled: true,  period: 1500, amount: null },
     crunch:    { tab: 'AD',       label: 'Crunch',     enabled: true,  period: 50,   amount: null },
-    buyMaxID:     { tab: 'Infinity', label: 'Max IDs',    enabled: false, period: 200,  amount: null },
-    buyMaxRep:    { tab: 'Infinity', label: 'Max Repl',   enabled: false, period: 200,  amount: null },
-    buyMaxIPMult: { tab: 'Infinity', label: 'Max IPMult', enabled: false, period: 200,  amount: null },
-    eternity:     { tab: 'Infinity', label: 'Eternity',   enabled: false, period: 100,  amount: null },
+    buyMaxID:           { tab: 'Infinity', label: 'Max IDs',           enabled: false, period: 200,  amount: null },
+    buyMaxRep:          { tab: 'Infinity', label: 'Max Repl',          enabled: false, period: 200,  amount: null },
+    buyMaxReplUpgrades: { tab: 'Infinity', label: 'Max Repl Upgrades', enabled: false, period: 200,  amount: null },
+    buyMaxIPMult:       { tab: 'Infinity', label: 'Max IPMult',        enabled: false, period: 200,  amount: null },
+    eternity:           { tab: 'Infinity', label: 'Eternity',          enabled: false, period: 100,  amount: null },
     buyMaxTD:  { tab: 'Eternity', label: 'Max TDs',    enabled: false, period: 200,  amount: null },
     dilatedEternity: { tab: 'Dilation', label: 'Dilated Eternity', enabled: false, period: 100, amount: null },
   };
@@ -68,6 +69,21 @@
     dilatedEternity: ['startDilatedEternity', 'Dilation.requestStartDilation'],
   };
 
+  const customDispatchers = {
+    buyMaxReplUpgrades: () => {
+      const buyToMax = (target) => {
+        if (target == null || typeof target.purchase !== 'function') return;
+        let safety = 1000;
+        while (target.canBeBought && safety-- > 0) target.purchase();
+      };
+      const RU = window.ReplicantiUpgrade;
+      if (RU == null) throw new Error('ReplicantiUpgrade missing');
+      buyToMax(RU.chance);
+      buyToMax(RU.interval);
+      buyToMax(RU.galaxies);
+    },
+  };
+
   function resolveFn(path) {
     return path.split('.').reduce((o, k) => (o == null ? o : o[k]), window);
   }
@@ -84,6 +100,8 @@
     return null;
   }
   function dispatch(name) {
+    const custom = customDispatchers[name];
+    if (typeof custom === 'function') return custom();
     for (const p of handlerPaths[name] || []) {
       const parts = p.split('.');
       const fnName = parts.pop();
