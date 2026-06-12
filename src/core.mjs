@@ -143,3 +143,9 @@ export function clampFps(value, def = 20, min = 1, max = 100) {
   if (n > max) return max;
   return Math.round(n);
 }
+
+export function trimWindow(timestamps, now, windowMs) {
+  let i = 0;
+  while (i < timestamps.length && now - timestamps[i] >= windowMs) i++;
+  return i === 0 ? timestamps : timestamps.slice(i);
+}

@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps } from '../src/core.mjs';
+import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow } from '../src/core.mjs';
 
 describe('encodeBookmarklet', () => {
   test('wraps body with javascript: prefix and void(0); suffix', () => {
@@ -442,5 +442,26 @@ describe('clampFps', () => {
     expect(clampFps(null)).toBe(20);
     expect(clampFps(undefined)).toBe(20);
     expect(clampFps('abc')).toBe(20);
+  });
+});
+
+describe('trimWindow', () => {
+  test('returns empty for an empty buffer', () => {
+    expect(trimWindow([], 1000, 1000)).toEqual([]);
+  });
+  test('keeps all entries when all are within the window', () => {
+    expect(trimWindow([900, 950, 990], 1000, 1000)).toEqual([900, 950, 990]);
+  });
+  test('drops entries at or older than windowMs ago', () => {
+    // now-0 = 1000 (>= window, drop), now-500 = 500 (keep), now-900 = 100 (keep)
+    expect(trimWindow([0, 500, 900], 1000, 1000)).toEqual([500, 900]);
+  });
+  test('treats the exact boundary as expired (strict)', () => {
+    expect(trimWindow([0], 1000, 1000)).toEqual([]);
+  });
+  test('length equals the count of ticks in the trailing window', () => {
+    const buf = [0, 100, 600, 800, 950];
+    // now=1000, window=1000: 0 -> 1000 expired; 100,600,800,950 survive
+    expect(trimWindow(buf, 1000, 1000).length).toBe(4);
   });
 });
