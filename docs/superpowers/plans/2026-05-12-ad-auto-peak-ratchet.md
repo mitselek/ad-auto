@@ -21,9 +21,10 @@
 
 ---
 
-### Task 1: Add the peak-ratchet block to `ad-auto.template.js` and rebuild
+## Task 1: Add the peak-ratchet block to `ad-auto.template.js` and rebuild
 
 **Files:**
+
 - Modify: `/home/michelek/Documents/github/mitselek/ad-auto/ad-auto.template.js`
 - Generated: `/home/michelek/Documents/github/mitselek/ad-auto/ad-auto.js`
 
@@ -111,7 +112,7 @@ EOF
 
 ---
 
-### Task 2: Manual verification handoff
+## Task 2: Manual verification handoff
 
 **Files:** none modified.
 
@@ -144,6 +145,7 @@ Paste these instructions to the user verbatim:
 - [ ] **Step 3: Capture deviations**
 
 If something doesn't behave as expected, map the symptom to a likely cause:
+
 - Amount doesn't auto-update at all → check that the ratchet block is inside the interval callback after the IPMult block, not outside.
 - Amount goes DOWN on a new run → the `peak.ip.gt(prev)` guard is missing or wrong; ratchet should only fire when peak.ip > current amount.
 - Flash doesn't appear → check the `.row.flash` CSS rule (generalized in the IPMult feature) is still present and the `rowEls.crunch` reference resolves.

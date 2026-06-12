@@ -45,6 +45,7 @@ The function never throws on any input.
 ### Task 1: TDD `isThresholdSet`
 
 **Files:**
+
 - Modify: `src/core.mjs` (add export)
 - Modify: `tests/core.test.mjs` (add describe block + 11 tests + import)
 
@@ -184,6 +185,7 @@ EOF
 ### Task 2: Wire crunch-delay into `ad-auto.template.js` + rebuild
 
 **Files:**
+
 - Modify: `ad-auto.template.js`
 - Generated: `ad-auto.js`
 
@@ -253,6 +255,7 @@ Insert a new branch immediately AFTER the `if (!cfg.enabled) continue;` line and
 ```
 
 After this insertion, the loop body's order is:
+
 1. `if (!cfg.enabled) continue;`
 2. New crunch-with-threshold branch (handles fire-on-timer-expiry, gate-then-set-timer, or skip).
 3. Default branch: period-as-interval check, gate check, dispatch.
@@ -324,6 +327,7 @@ EOF
 - [ ] **Step 2: Capture deviations**
 
 Symptom → likely cause:
+
 - Crunch fires immediately on threshold (no delay) → the special branch isn't running. Check that `isThresholdSet(cfg.amount, window.Decimal)` returns `true` for the current amount; the branch's order relative to the default branch.
 - Timer never expires → `crunchReadyAt` not being compared against `now` correctly, or `now` is in the wrong unit.
 - Action fires twice in quick succession → `crunchReadyAt` is set but not cleared after dispatch.

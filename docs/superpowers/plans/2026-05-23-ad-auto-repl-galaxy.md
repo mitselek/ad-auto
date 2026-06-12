@@ -19,9 +19,10 @@
 
 ---
 
-### Task 1: Swap buyMaxRep → replGalaxy + rebuild
+## Task 1: Swap buyMaxRep → replGalaxy + rebuild
 
 **Files:**
+
 - Modify: `ad-auto.template.js`
 - Generated: `ad-auto.js`
 
@@ -137,7 +138,7 @@ EOF
 
 ---
 
-### Task 2: Manual verification handoff
+## Task 2: Manual verification handoff
 
 **Files:** none modified.
 

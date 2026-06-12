@@ -57,23 +57,29 @@ All other `updatePeak` tests (first valid sample, higher rate replaces, lower ra
 `ad-auto.template.js`:
 
 - CSS: override the grid for `.peak-row` so it lays out as a single flex line:
+
   ```css
   #${PID} .row.peak-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0}
   ```
+
   (the existing `.row` rule with `display:grid` remains for all non-peak rows.)
 - HTML: simplify the peak row to two children:
+
   ```js
   pr.innerHTML = `
     <span class="name">Peak IP/min</span>
     <span class="peak-value"><span class="peak-rate">—</span> at <span class="peak-ip">—</span></span>
   `;
   ```
+
   Visually: `Peak IP/min                2.44e+44 at 5.11e+43` on a single line.
 - `refreshGui` continues to populate `.peak-rate` and `.peak-ip` independently; only the wrapper changed. The `(at …)` prefix is no longer needed in the JS — the literal " at " between the spans replaces it. `refreshGui` writes:
+
   ```js
   peakRow.querySelector('.peak-rate').textContent = fmtExp(peak.rate);
   peakRow.querySelector('.peak-ip').textContent = fmtExp(peak.ip);
   ```
+
   (Previously the IP text was `'(at ' + fmtExp(peak.ip) + ')'`. With the inline " at " in the HTML structure, the prefix parens become unnecessary noise.)
 - The click handler still works because it does `e.target.closest('.peak-row')` to detect the row — independent of internal layout.
 
@@ -82,11 +88,14 @@ All other `updatePeak` tests (first valid sample, higher rate replaces, lower ra
 `ad-auto.template.js`:
 
 1. **Mark the crunch amount input readonly.** In the input-building loop, the crunch row's amount input gets a `readonly` attribute alongside its existing `type="text"`. Concretely, add `data-name="crunch"`-specific handling in the row template, or simpler: extend the existing `amtAttrs` derivation. The existing code is:
+
    ```js
    const amtType = name === 'crunch' ? 'text' : 'number';
    const amtAttrs = name === 'crunch' ? '' : 'min="0" step="1"';
    ```
+
    Change to:
+
    ```js
    const amtType = name === 'crunch' ? 'text' : 'number';
    const amtAttrs = name === 'crunch' ? 'readonly' : 'min="0" step="1"';
@@ -94,10 +103,13 @@ All other `updatePeak` tests (first valid sample, higher rate replaces, lower ra
 
 2. **Format `#.##e####` (i.e. `.toExponential(2)`) at every write site.** Three sites in the template:
    - **Ratchet block:**
+
      ```js
      const s = (typeof peak.ip.toExponential === 'function') ? peak.ip.toExponential(2) : String(peak.ip);
      ```
+
    - **IPMult-double in the interval callback:** wrap `result.amount` before applying:
+
      ```js
      if (result.scaled) {
        let formatted = result.amount;
@@ -110,7 +122,9 @@ All other `updatePeak` tests (first valid sample, higher rate replaces, lower ra
        ...
      }
      ```
+
    - **Peak-row click handler:** same as the ratchet block:
+
      ```js
      const s = (typeof peak.ip.toExponential === 'function') ? peak.ip.toExponential(2) : String(peak.ip);
      input.value = s;
@@ -120,11 +134,13 @@ All other `updatePeak` tests (first valid sample, higher rate replaces, lower ra
    `updateIpMult` in `src/core.mjs` is **not** changed — it keeps returning a full-precision `toString()` string. The formatting happens at the consumption site so the pure function stays decoupled from display concerns.
 
 3. **Remove the now-dead change-event branch for crunch amount.** The existing handler:
+
    ```js
    } else if (name === 'crunch' && prop === 'amount') {
      config[name][prop] = t.value.trim() === '' ? null : t.value.trim();
    }
    ```
+
    becomes unreachable when the input is readonly (programmatic `.value` assignment doesn't fire `change`). Delete this branch. The `t.type === 'number'` branch below still handles other rows.
 
 4. **Initial-load behavior:** any pre-existing long-precision value in `localStorage` stays as-is on boot. The first ratchet or IPMult event after boot rewrites it in rounded form. No one-shot migration; over time everything settles into the rounded format.

@@ -56,7 +56,7 @@ These are the units that get TDD'd:
 | `updatePeak(prev, sample)` | ({rate, ip, lastTMs}, {gip, tMs}) → {rate, ip, lastTMs} | Pure state-transition: applies run-reset, then peak update. |
 | `gateCrunch(amount, gipResolver, DecimalCtor)` | (string\|null, () => Decimal\|number\|null, function?) → boolean | Auto-crunch gate. `amount` empty/null/invalid → `true`. |
 | `encodeBookmarklet(iifeBody)` | string → string | Returns `"javascript:" + encodeURIComponent(iifeBody) + "void(0);"`. |
-| `decodeBookmarklet(line)` | string → string | Reverses encodeBookmarklet. Strips leading `// ` if present. Throws on malformed input. |
+| `decodeBookmarklet(line)` | string → string | Reverses encodeBookmarklet. Strips leading `//` if present. Throws on malformed input. |
 
 The DOM, `setInterval` loops, `localStorage`, and the panel HTML stay in `ad-auto.template.js` and are not TDD'd (the user accepted "pure logic only").
 
@@ -65,6 +65,7 @@ The DOM, `setInterval` loops, `localStorage`, and the panel HTML stay in `ad-aut
 ### Task 1: Scaffold Vitest and project layout
 
 **Files:**
+
 - Create: `/home/michelek/Documents/github/package.json`
 - Create: `/home/michelek/Documents/github/src/` (empty dir)
 - Create: `/home/michelek/Documents/github/tests/` (empty dir)
@@ -140,6 +141,7 @@ rm /home/michelek/Documents/github/tests/smoke.test.mjs
 ### Task 2: TDD — `encodeBookmarklet` + `decodeBookmarklet`
 
 **Files:**
+
 - Create: `/home/michelek/Documents/github/src/core.mjs`
 - Create: `/home/michelek/Documents/github/tests/core.test.mjs`
 
@@ -270,7 +272,7 @@ cd /home/michelek/Documents/github && npx vitest run tests/core.test.mjs
 
 Expected: `3 passed`.
 
-**TDD cycle 4: decode handles `// `-prefixed comment lines (the form on disk).**
+**TDD cycle 4: decode handles `//`-prefixed comment lines (the form on disk).**
 
 - [ ] **Step 13 (RED): test**
 
@@ -343,6 +345,7 @@ Expected: `5 passed`.
 ### Task 3: Decode the on-disk bookmarklet → seed `ad-auto.template.js`
 
 **Files:**
+
 - Read: `/home/michelek/Documents/github/ad-auto.js` (line 305 `START:` payload)
 - Create: `/home/michelek/Documents/github/ad-auto.template.js`
 
@@ -387,7 +390,7 @@ Edit `ad-auto.template.js`. Find the line `const STORAGE_KEY = '__auto_settings_
   // @inline:core
 ```
 
-This marker is on its own line, indented two spaces to match the existing style. The build script will replace this single line with the contents of `src/core.mjs` (with `export ` stripped).
+This marker is on its own line, indented two spaces to match the existing style. The build script will replace this single line with the contents of `src/core.mjs` (with `export` stripped).
 
 - [ ] **Step 4: Tell the user**
 
@@ -398,10 +401,11 @@ Report: "Template extracted. `ad-auto.template.js` is now the source-of-truth II
 ### Task 4: Build script + first synthesis
 
 **Files:**
+
 - Create: `/home/michelek/Documents/github/scripts/build.mjs`
 - Modify: `/home/michelek/Documents/github/ad-auto.js` (becomes a generated artifact)
 
-**Background:** The build script reads `ad-auto.template.js`, replaces the `// @inline:core` marker with `src/core.mjs` (stripped of `export ` keywords), URL-encodes the resulting IIFE body for the bookmarklet, then writes the full `ad-auto.js` (preamble comment + SNIPPET section + BOOKMARKLET section). After this task, editing `ad-auto.js` directly is forbidden; the source-of-truth is template + core, and `npm run build` regenerates the artifact.
+**Background:** The build script reads `ad-auto.template.js`, replaces the `// @inline:core` marker with `src/core.mjs` (stripped of `export` keywords), URL-encodes the resulting IIFE body for the bookmarklet, then writes the full `ad-auto.js` (preamble comment + SNIPPET section + BOOKMARKLET section). After this task, editing `ad-auto.js` directly is forbidden; the source-of-truth is template + core, and `npm run build` regenerates the artifact.
 
 We TDD'd `encodeBookmarklet` — the build script imports it. We **do not** TDD the build script itself (it's an integration glue); we verify it by running it and inspecting the output.
 
@@ -492,6 +496,7 @@ Wait for confirmation.
 ### Task 5: TDD — `fmtExp` (formatter)
 
 **Files:**
+
 - Modify: `/home/michelek/Documents/github/src/core.mjs`
 - Modify: `/home/michelek/Documents/github/tests/core.test.mjs`
 
@@ -607,6 +612,7 @@ export function fmtExp(v) {
 ### Task 6: TDD — `parseDecimalLike`, `isRunReset`, `computeRate`, `isHigherRate`
 
 **Files:**
+
 - Modify: `/home/michelek/Documents/github/src/core.mjs`
 - Modify: `/home/michelek/Documents/github/tests/core.test.mjs`
 
@@ -617,6 +623,7 @@ Each function gets its own `describe` block. Each TDD cycle below is RED → ver
 - [ ] **Cycle: returns false when prev is null/undefined**
 
 RED test:
+
 ```js
 import { isRunReset } from '../src/core.mjs';
 describe('isRunReset', () => {
@@ -630,6 +637,7 @@ describe('isRunReset', () => {
 ```
 
 GREEN:
+
 ```js
 export function isRunReset(tMs, lastTMs) {
   if (lastTMs == null) return false;
@@ -642,11 +650,13 @@ Verify (`npx vitest run tests/core.test.mjs`): pass.
 - [ ] **Cycle: true when current << previous**
 
 RED test:
+
 ```js
   test('true when tMs is sharply less than lastTMs', () => {
     expect(isRunReset(0, 9000)).toBe(true);
   });
 ```
+
 Run: fails.
 
 GREEN: `return tMs < lastTMs - 50;`
@@ -654,6 +664,7 @@ GREEN: `return tMs < lastTMs - 50;`
 - [ ] **Cycle: false within slop window**
 
 RED:
+
 ```js
   test('false when within 50ms slop', () => {
     expect(isRunReset(9000, 9020)).toBe(false);   // 20ms backwards, still in slop
@@ -663,6 +674,7 @@ RED:
     expect(isRunReset(9000, 9051)).toBe(true);
   });
 ```
+
 Run: first two pass already (the `<` makes them strict). Third: with `lastTMs - 50 = 9001`, `9000 < 9001` → true. Pass. All green.
 
 **`computeRate`:**
@@ -670,6 +682,7 @@ Run: first two pass already (the `<` makes them strict). Third: with `lastTMs - 
 - [ ] **Cycle: returns null when tMs < 1**
 
 RED:
+
 ```js
 import { computeRate } from '../src/core.mjs';
 describe('computeRate', () => {
@@ -679,20 +692,24 @@ describe('computeRate', () => {
   });
 });
 ```
+
 Run: fails (`computeRate is not a function`).
 
 GREEN:
+
 ```js
 export function computeRate(gip, tMs) {
   if (tMs < 1) return null;
   return null;
 }
 ```
+
 Verify: passes.
 
 - [ ] **Cycle: divides gip by minutes for plain numbers**
 
 RED:
+
 ```js
   test('rate = gip / (tMs/60000) for plain number gip', () => {
     expect(computeRate(60, 60000)).toBe(60);     // 60 IP in 1 minute → 60/min
@@ -700,9 +717,11 @@ RED:
     expect(computeRate(60, 30000)).toBe(120);    // 60 IP in 30s → 120/min
   });
 ```
+
 Run: fails (currently returns null).
 
 GREEN:
+
 ```js
 export function computeRate(gip, tMs) {
   if (tMs < 1) return null;
@@ -711,17 +730,20 @@ export function computeRate(gip, tMs) {
   return Number(gip) / minutes;
 }
 ```
+
 Verify: passes.
 
 - [ ] **Cycle: uses Decimal.div when available**
 
 RED:
+
 ```js
   test('delegates to gip.div when present (Decimal-like)', () => {
     const fake = { div: (m) => `div-by-${m}` };
     expect(computeRate(fake, 60000)).toBe('div-by-1');
   });
 ```
+
 Run: already passes due to the branch added in previous cycle. Same purist note — leave as documentation.
 
 **`isHigherRate`:**
@@ -729,6 +751,7 @@ Run: already passes due to the branch added in previous cycle. Same purist note 
 - [ ] **Cycle: prev null → always higher**
 
 RED:
+
 ```js
 import { isHigherRate } from '../src/core.mjs';
 describe('isHigherRate', () => {
@@ -738,20 +761,24 @@ describe('isHigherRate', () => {
   });
 });
 ```
+
 Run: fails.
 
 GREEN:
+
 ```js
 export function isHigherRate(rate, prev) {
   if (prev == null) return true;
   return false;
 }
 ```
+
 Verify: passes.
 
 - [ ] **Cycle: plain numbers compare**
 
 RED:
+
 ```js
   test('plain-number comparison', () => {
     expect(isHigherRate(5, 4)).toBe(true);
@@ -759,9 +786,11 @@ RED:
     expect(isHigherRate(5, 5)).toBe(false);
   });
 ```
+
 Run: fails (always false now).
 
 GREEN:
+
 ```js
 export function isHigherRate(rate, prev) {
   if (prev == null) return true;
@@ -769,11 +798,13 @@ export function isHigherRate(rate, prev) {
   return Number(rate) > Number(prev);
 }
 ```
+
 Verify: passes.
 
 - [ ] **Cycle: Decimal-like uses `.gt`**
 
 RED:
+
 ```js
   test('delegates to rate.gt when present', () => {
     const fake = { gt: (p) => p === 'lower' };
@@ -781,6 +812,7 @@ RED:
     expect(isHigherRate(fake, 'higher')).toBe(false);
   });
 ```
+
 Run: passes (already covered by the branch). Same note.
 
 **`parseDecimalLike`:**
@@ -788,6 +820,7 @@ Run: passes (already covered by the branch). Same note.
 - [ ] **Cycle: empty/whitespace → null**
 
 RED:
+
 ```js
 import { parseDecimalLike } from '../src/core.mjs';
 describe('parseDecimalLike', () => {
@@ -799,9 +832,11 @@ describe('parseDecimalLike', () => {
   });
 });
 ```
+
 Run: fails (`parseDecimalLike is not a function`).
 
 GREEN:
+
 ```js
 export function parseDecimalLike(s, DecimalCtor) {
   if (s == null) return null;
@@ -810,20 +845,24 @@ export function parseDecimalLike(s, DecimalCtor) {
   return null;
 }
 ```
+
 Verify: passes.
 
 - [ ] **Cycle: plain number string → Number**
 
 RED:
+
 ```js
   test('returns Number for a numeric string when no DecimalCtor', () => {
     expect(parseDecimalLike('1234')).toBe(1234);
     expect(parseDecimalLike(' 5.5 ')).toBe(5.5);
   });
 ```
+
 Run: fails.
 
 GREEN:
+
 ```js
 export function parseDecimalLike(s, DecimalCtor) {
   if (s == null) return null;
@@ -837,22 +876,26 @@ export function parseDecimalLike(s, DecimalCtor) {
   return n;
 }
 ```
+
 Verify: passes.
 
 - [ ] **Cycle: invalid string → null**
 
 RED:
+
 ```js
   test('returns null for unparseable strings', () => {
     expect(parseDecimalLike('abc')).toBe(null);
     expect(parseDecimalLike('1e')).toBe(null);
   });
 ```
+
 Run: `Number('abc')` = NaN → already returns null via the Number.isFinite guard. Tests pass. Same note about tests-pass-immediately.
 
 - [ ] **Cycle: with DecimalCtor it builds a Decimal**
 
 RED:
+
 ```js
   test('uses DecimalCtor when provided', () => {
     class FakeDecimal {
@@ -867,6 +910,7 @@ RED:
     expect(parseDecimalLike('anything', Throwing)).toBe(null);
   });
 ```
+
 Run: passes (branch already there).
 
 Final: run `npx vitest run tests/core.test.mjs` — all tests across `encode/decode`, `fmtExp`, `isRunReset`, `computeRate`, `isHigherRate`, `parseDecimalLike` green.
@@ -876,6 +920,7 @@ Final: run `npx vitest run tests/core.test.mjs` — all tests across `encode/dec
 ### Task 7: TDD — `updatePeak` (the state machine)
 
 **Files:**
+
 - Modify: `/home/michelek/Documents/github/src/core.mjs`
 - Modify: `/home/michelek/Documents/github/tests/core.test.mjs`
 
@@ -1082,10 +1127,12 @@ After each, run `npx vitest run tests/core.test.mjs` and confirm green. Refactor
 ### Task 8: TDD — `gateCrunch`
 
 **Files:**
+
 - Modify: `/home/michelek/Documents/github/src/core.mjs`
 - Modify: `/home/michelek/Documents/github/tests/core.test.mjs`
 
 **Background:** `gateCrunch(amount, gipResolver, DecimalCtor)` returns true (fire) or false (block). Inputs:
+
 - `amount`: string from the user's text input. `null`, `''`, or invalid → gate off (true).
 - `gipResolver()`: callable returning current `gainedInfinityPoints` (Decimal or number) or `null`. If `null`, gate off (true).
 - `DecimalCtor`: optional, for parsing the amount string.
@@ -1246,6 +1293,7 @@ Final: `npx vitest run tests/core.test.mjs` — all green.
 ### Task 9: Wire pure core into template (peak sampler, UI row, click, gate, text input)
 
 **Files:**
+
 - Modify: `/home/michelek/Documents/github/ad-auto.template.js`
 
 **Background:** Integration code that uses the (now tested) core functions. The template is hand-written and not TDD'd. After this task, rebuilding produces the final `ad-auto.js`.
@@ -1326,7 +1374,7 @@ Find the row-creation loop `for (const [name, cfg] of Object.entries(config)) {`
 
 - [ ] **Step 6: Add peak-row CSS to the panel `<style>` block**
 
-In the `panel.innerHTML = `...`` template, find the `<style>` block. Append before `</style>`:
+In the `panel.innerHTML =`...`` template, find the `<style>` block. Append before `</style>`:
 
 ```css
       #${PID} .peak-row{cursor:pointer}
@@ -1467,6 +1515,7 @@ Expected: all green. Tests don't exercise the template, but they verify `src/cor
 - [ ] **Step 17: Manual smoke test (ask user)**
 
 Tell the user: "Build complete with peak-IP feature integrated. Paste the SNIPPET section into AD. Verify:
+
 1. New 'Peak IP/min' row above crunch in the AD tab.
 2. Row updates within ~5 seconds of a fresh run.
 3. Clicking the row pastes the IP-at-peak into the crunch amount text input and flashes green for ~600 ms.
@@ -1479,6 +1528,7 @@ Reply OK or report any visual/behavioral bugs."
 ### Task 10: Final round-trip + bookmarklet check
 
 **Files:**
+
 - Read-only: `/home/michelek/Documents/github/ad-auto.js`
 
 - [ ] **Step 1: Decoded bookmarklet matches snippet IIFE**
@@ -1514,7 +1564,7 @@ Expected: `ROUND-TRIP OK`.
 
 - [ ] **Step 2: Final user verification (ask user)**
 
-Tell the user: "Drag the bookmarklet line (`// javascript:...`) from `ad-auto.js` into your browser's bookmarks bar (right-click → Add bookmark, paste as URL after stripping the leading `// `). Click it on the AD tab. Same panel and behavior as the snippet path. `localStorage.getItem('__auto_settings_v1')` should return the same JSON shape regardless of mount path. Reply OK to close out."
+Tell the user: "Drag the bookmarklet line (`// javascript:...`) from `ad-auto.js` into your browser's bookmarks bar (right-click → Add bookmark, paste as URL after stripping the leading `//`). Click it on the AD tab. Same panel and behavior as the snippet path. `localStorage.getItem('__auto_settings_v1')` should return the same JSON shape regardless of mount path. Reply OK to close out."
 
 ---
 

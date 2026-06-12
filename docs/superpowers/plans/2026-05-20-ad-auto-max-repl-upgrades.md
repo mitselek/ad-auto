@@ -19,9 +19,10 @@
 
 ---
 
-### Task 1: Add the buyMaxReplUpgrades action + rebuild
+## Task 1: Add the buyMaxReplUpgrades action + rebuild
 
 **Files:**
+
 - Modify: `ad-auto.template.js`
 - Generated: `ad-auto.js`
 
@@ -170,7 +171,7 @@ EOF
 
 ---
 
-### Task 2: Manual verification handoff
+## Task 2: Manual verification handoff
 
 **Files:** none modified.
 

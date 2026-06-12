@@ -85,6 +85,7 @@ In `ad-auto.template.js`:
 1. **Declare a closure-local `crunchReadyAt`** initialized to `null`, placed alongside the existing `let lastIpMultCount` declaration.
 
 2. **Restructure the crunch branch of the main 50 ms `intervalId` callback.** Currently the loop body is uniform:
+
    ```js
    for (const [name, cfg] of Object.entries(config)) {
      if (!cfg.enabled) continue;
@@ -94,7 +95,9 @@ In `ad-auto.template.js`:
      catch (e) { stats[name].errs++; if (stats[name].errs <= 2) console.warn(name, 'threw', e); }
    }
    ```
+
    Insert a special branch for `name === 'crunch'` that runs *after* the `cfg.enabled` check but *before* the default period-as-interval / gate / dispatch path:
+
    ```js
    if (name === 'crunch' && isThresholdSet(cfg.amount, window.Decimal)) {
      if (crunchReadyAt != null) {
@@ -109,6 +112,7 @@ In `ad-auto.template.js`:
      continue;
    }
    ```
+
    When the threshold is unset, the existing loop body handles crunch with today's period-as-interval semantics.
 
 3. **No CSS or HTML changes.** TIME column already supports the new meaning by interpretation. The label "TIME" continues to be accurate in both modes. (A future change could relabel it contextually; out of scope here.)

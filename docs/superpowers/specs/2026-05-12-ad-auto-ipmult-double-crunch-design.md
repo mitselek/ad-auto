@@ -85,6 +85,7 @@ Diff sketch:
 2. **`saveSettings()`** — add `lastIpMultCount` to the persisted JSON.
 3. **`peakProbes`** — extend the object with `ipMult: ['InfinityUpgrade.ipMult.purchaseCount']`.
 4. **`peakIntervalId` callback** — after the existing `peak = updatePeak(...)` line:
+
    ```js
    const ipMultCount = resolveRaw(peakProbes.ipMult);
    const result = updateIpMult(
@@ -107,6 +108,7 @@ Diff sketch:
      saveSettings();
    }
    ```
+
 5. **CSS** — generalize the existing `#${PID} .peak-row.flash` rule to `#${PID} .row.flash` so the same background applies to any row, then add the `flash` class to the crunch row on scaling events. The peak-row click flash continues to work because `.peak-row` is itself a `.row`.
 
 No new globals on `window.__auto`. No new console helpers.

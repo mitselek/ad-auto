@@ -2,6 +2,7 @@
 
 Date: 2026-05-23
 Scope: `ad-auto.template.js` —
+
 1. Add a new auto-action `replGalaxy` that calls the global `replicantiGalaxy()` function on every 50 ms tick.
 2. Remove the broken `buyMaxRep` action (handler paths `Replicanti.galaxies.buyMax` and `maxReplicantiGalaxies` both missing in this AD build; the row has been a no-op).
 

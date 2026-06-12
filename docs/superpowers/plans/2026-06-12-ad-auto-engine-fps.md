@@ -22,6 +22,7 @@
 ## Task 1: `clampFps` helper
 
 **Files:**
+
 - Modify: `src/core.mjs`
 - Test: `tests/core.test.mjs`
 
@@ -104,6 +105,7 @@ git commit -m "feat: add clampFps helper for engine FPS bounds"
 ## Task 2: `trimWindow` helper
 
 **Files:**
+
 - Modify: `src/core.mjs`
 - Test: `tests/core.test.mjs`
 
@@ -176,6 +178,7 @@ git commit -m "feat: add trimWindow helper for trailing-second FPS count"
 ## Task 3: Engine refactor — `engineFps`, `mainTick`, `startEngine`, persistence
 
 **Files:**
+
 - Modify: `ad-auto.template.js`
 
 The inlined core (via `// @inline:core`) makes `clampFps` and `trimWindow` available as bare functions inside the IIFE — no import needed in the template.
@@ -335,6 +338,7 @@ Note: `ad-auto.js` is not rebuilt yet — that happens in Task 5 after the UI is
 ## Task 4: Header chip UI — editable desired FPS + live actual readout
 
 **Files:**
+
 - Modify: `ad-auto.template.js`
 
 - [ ] **Step 1: Add chip markup to the header**
@@ -467,6 +471,7 @@ git commit -m "feat: header chip with editable desired FPS and live actual-FPS r
 ## Task 5: Build and verify
 
 **Files:**
+
 - Modify: `ad-auto.js` (generated)
 
 - [ ] **Step 1: Run the full test suite**

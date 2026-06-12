@@ -63,6 +63,7 @@ The function never throws on any input.
 ### Task 1: TDD — baseline / no-scale cases for `updateIpMult`
 
 **Files:**
+
 - Modify: `src/core.mjs` (add `updateIpMult` export, minimal impl)
 - Modify: `tests/core.test.mjs` (add `updateIpMult` describe block, first four tests + import)
 
@@ -163,6 +164,7 @@ EOF
 ### Task 2: TDD — scaling cases for `updateIpMult` (with `FakeDecimal` stub)
 
 **Files:**
+
 - Modify: `src/core.mjs` (implement scaling path)
 - Modify: `tests/core.test.mjs` (add `FakeDecimal` stub + scaling tests)
 
@@ -275,6 +277,7 @@ EOF
 ### Task 3: TDD — defensive cases (no-scale when input prevents it)
 
 **Files:**
+
 - Modify: `src/core.mjs` (add guards)
 - Modify: `tests/core.test.mjs` (add four defensive tests)
 
@@ -393,6 +396,7 @@ EOF
 ### Task 4: Wire `updateIpMult` into `ad-auto.template.js` and rebuild
 
 **Files:**
+
 - Modify: `ad-auto.template.js`
 - Generated: `ad-auto.js` (rebuilt by `npm run build`)
 
@@ -570,6 +574,7 @@ Paste these instructions back to the user verbatim:
 - [ ] **Step 3: Capture any deviations**
 
 If the user reports a problem, do not blindly patch. Match the symptom to one of:
+
 - Scaling not firing → check `window.Decimal` resolves and the probe returns a number (run the probe snippet from the spec).
 - Scaling firing twice → check `lastIpMultCount` is being written before the next tick.
 - Wrong amount after refresh → check `saveSettings()` includes `lastIpMultCount` (Task 4 Step 2).

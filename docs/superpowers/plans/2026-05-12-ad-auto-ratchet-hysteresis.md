@@ -19,9 +19,10 @@
 
 ---
 
-### Task 1: Add hysteresis to the auto-ratchet + rebuild
+## Task 1: Add hysteresis to the auto-ratchet + rebuild
 
 **Files:**
+
 - Modify: `ad-auto.template.js`
 - Generated: `ad-auto.js`
 

@@ -17,9 +17,10 @@
 
 ---
 
-### Task 1: Rewrite dispatch + rebuild
+## Task 1: Rewrite dispatch + rebuild
 
 **Files:**
+
 - Modify: `ad-auto.template.js`
 - Generated: `ad-auto.js`
 
@@ -101,7 +102,7 @@ EOF
 
 ---
 
-### Task 2: Manual verification handoff
+## Task 2: Manual verification handoff
 
 - [ ] **Step 1: Hand off verification script**
 

@@ -5,10 +5,12 @@ Antimatter Dimensions browser-console auto-buy helper with a draggable GUI panel
 ## Install
 
 ### Snippet
+
 Open AD in your browser, open DevTools, paste the entire SNIPPET section of [`ad-auto.js`](./ad-auto.js) into the console.
 
 ### Bookmarklet
-Copy the long `// javascript:...` line under `// START:` in `ad-auto.js` (without the leading `// `), create a new bookmark, paste it as the URL. Click on the AD tab to mount the panel.
+
+Copy the long `// javascript:...` line under `// START:` in `ad-auto.js` (without the leading `//`), create a new bookmark, paste it as the URL. Click on the AD tab to mount the panel.
 
 ## Features
 

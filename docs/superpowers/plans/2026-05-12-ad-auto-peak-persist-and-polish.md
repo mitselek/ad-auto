@@ -23,9 +23,10 @@
 
 ---
 
-### Task 1: TDD — `updatePeak` preserves peak across run resets
+## Task 1: TDD — `updatePeak` preserves peak across run resets
 
 **Files:**
+
 - Modify: `src/core.mjs` (drop the `isRunReset` null-out branch in `updatePeak`)
 - Modify: `tests/core.test.mjs` (rewrite 2 existing run-reset tests, add 1 new positive test)
 
@@ -82,6 +83,7 @@ cd /home/michelek/Documents/github/mitselek/ad-auto && npx vitest run tests/core
 ```
 
 Expected failures:
+
 - `'run reset preserves peak; lower-rate new sample does not displace it'` — current `updatePeak` nulls peak on isRunReset, so the new (rate=30) sample becomes the new peak. Expected `rate: 60`, got `rate: 30`.
 - `'run reset with tMs<1 preserves peak'` — current code nulls peak then computeRate returns null. Expected `{ rate: 60, ip: 60, lastTMs: 0 }`, got `{ rate: null, ip: null, lastTMs: 0 }`.
 - `'higher rate after run reset displaces peak'` — current code nulls peak then sets it to new sample. Expected `rate: 300, ip: 5`. Current code happens to produce this too (after null-out, the new sample becomes the first peak). This test may actually PASS against current code; that's acceptable — it serves as a regression guard for the new behavior, ensuring displacement still works after the null-out branch is removed.
@@ -159,9 +161,10 @@ EOF
 
 ---
 
-### Task 2: Template changes (layout, readonly, rounded format) + rebuild
+## Task 2: Template changes (layout, readonly, rounded format) + rebuild
 
 **Files:**
+
 - Modify: `ad-auto.template.js`
 - Generated: `ad-auto.js`
 
@@ -404,7 +407,7 @@ EOF
 
 ---
 
-### Task 3: Manual verification handoff
+## Task 3: Manual verification handoff
 
 **Files:** none modified.
 
@@ -423,9 +426,11 @@ Expected: clean.
 > 1. Open Antimatter Dimensions with an in-progress save.
 > 2. Open DevTools → Console.
 > 3. **Optional but recommended:** clear the prior persisted crunch amount so verification starts fresh:
+>
 >    ```js
 >    localStorage.removeItem('__auto_settings_v1');
 >    ```
+>
 > 4. Paste the SNIPPET section of the freshly built `ad-auto.js`. Confirm panel mounts.
 > 5. **Layout:** Peak IP/min row should render as a single horizontal line: `Peak IP/min   <rate> at <ip>`. No wrapping of the IP onto a second line at default panel width. Resize / drag the panel to confirm it still looks right.
 > 6. **Readonly:** click into the crunch amount input field and try to type. The input should not accept keystrokes; the field remains whatever the auto-systems set it to.
@@ -439,6 +444,7 @@ Expected: clean.
 - [ ] **Step 3: Capture deviations**
 
 Symptom → likely cause:
+
 - Crunch amount field shows a long string → one of the three write sites missed the `.toExponential(2)` change.
 - User can type into crunch amount field → the `readonly` attribute wasn't applied.
 - Peak row wraps → CSS rule for `.row.peak-row` not in effect; check selector specificity and that `display:flex` is the new value.
