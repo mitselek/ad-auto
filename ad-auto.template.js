@@ -35,6 +35,9 @@
   let lastIpMultCount = (stored && typeof stored.lastIpMultCount === 'number')
     ? stored.lastIpMultCount
     : null;
+  let engineFps = clampFps(stored && stored.engineFps);
+  let fpsBuf = [];
+  let actualFps = 0;
   let crunchReadyAt = null;
   let currentTab = null;
   function saveSettings() {
@@ -51,6 +54,7 @@
           top:  panel.style.top  || null,
         },
         lastIpMultCount,
+        engineFps,
       }));
     } catch {}
   }
@@ -171,9 +175,11 @@
   let peak = { rate: null, ip: null, lastTMs: null };
   const startedAt = performance.now();
 
-  const TICK_MS = 50;
-  const intervalId = setInterval(() => {
+  function mainTick() {
     const now = performance.now();
+    fpsBuf.push(now);
+    fpsBuf = trimWindow(fpsBuf, now, 1000);
+    actualFps = fpsBuf.length;
     for (const [name, cfg] of Object.entries(config)) {
       if (!cfg.enabled) continue;
       if (name === 'crunch' && isThresholdSet(cfg.amount, window.Decimal)) {
@@ -206,7 +212,14 @@
       }
     }
     refreshGui();
-  }, TICK_MS);
+  }
+
+  let mainIntervalId = null;
+  function startEngine() {
+    if (mainIntervalId != null) clearInterval(mainIntervalId);
+    mainIntervalId = setInterval(mainTick, Math.round(1000 / engineFps));
+  }
+  startEngine();
 
   const peakIntervalId = setInterval(() => {
     const tMs = resolveRaw(peakProbes.tMs);
@@ -517,7 +530,7 @@
     config, stats, handlerPaths, gates,
     get peak() { return peak; },
     stop() {
-      clearInterval(intervalId);
+      clearInterval(mainIntervalId);
       clearInterval(peakIntervalId);
       panel.remove();
       delete window.__auto;
