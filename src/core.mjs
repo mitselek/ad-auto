@@ -133,3 +133,13 @@ export function isThresholdSet(amount, DecimalCtor) {
   const n = Number(parsed);
   return Number.isFinite(n) && n > 0;
 }
+
+export function clampFps(value, def = 20, min = 1, max = 100) {
+  if (value == null) return def;
+  if (typeof value === 'string' && value.trim() === '') return def;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return def;
+  if (n < min) return min;
+  if (n > max) return max;
+  return Math.round(n);
+}

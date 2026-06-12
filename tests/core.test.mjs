@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet } from '../src/core.mjs';
+import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps } from '../src/core.mjs';
 
 describe('encodeBookmarklet', () => {
   test('wraps body with javascript: prefix and void(0); suffix', () => {
@@ -413,5 +413,34 @@ describe('isThresholdSet', () => {
 
   test('unparseable string without DecimalCtor returns false', () => {
     expect(isThresholdSet('abc')).toBe(false);
+  });
+});
+
+describe('clampFps', () => {
+  test('passes a normal in-range value through (rounded to int)', () => {
+    expect(clampFps(20)).toBe(20);
+    expect(clampFps(30)).toBe(30);
+    expect(clampFps('45')).toBe(45);
+    expect(clampFps(20.6)).toBe(21);
+  });
+  test('clamps below min up to 1', () => {
+    expect(clampFps(0)).toBe(1);
+    expect(clampFps(-5)).toBe(1);
+  });
+  test('clamps above max down to 100', () => {
+    expect(clampFps(101)).toBe(100);
+    expect(clampFps(99999)).toBe(100);
+  });
+  test('keeps the exact bounds', () => {
+    expect(clampFps(1)).toBe(1);
+    expect(clampFps(100)).toBe(100);
+  });
+  test('falls back to default 20 for non-numeric / blank / nullish', () => {
+    expect(clampFps(NaN)).toBe(20);
+    expect(clampFps('')).toBe(20);
+    expect(clampFps('   ')).toBe(20);
+    expect(clampFps(null)).toBe(20);
+    expect(clampFps(undefined)).toBe(20);
+    expect(clampFps('abc')).toBe(20);
   });
 });
