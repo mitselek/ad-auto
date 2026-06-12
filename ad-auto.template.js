@@ -69,7 +69,7 @@
     replGalaxy:      ['replicantiGalaxy'],
     buyMaxIPMult:    ['InfinityUpgrade.ipMult.buyMax'],
     eternity:        ['eternity', 'requestEternity', 'manualRequestEternity'],
-    buyMaxTD:        ['buyMaxTimeDimensions', 'TimeDimensions.buyMax'],
+    buyMaxTD:        ['maxAllTimeDimensions', 'buyMaxTimeDimensions', 'TimeDimensions.buyMax'],
     dilatedEternity: ['startDilatedEternity', 'Dilation.requestStartDilation'],
   };
 
