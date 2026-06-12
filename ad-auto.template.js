@@ -297,6 +297,13 @@
       #${PID} .head{display:flex;align-items:center;gap:8px;cursor:move;
         padding-bottom:6px;border-bottom:1px solid #333;margin-bottom:6px}
       #${PID} .title{font-size:12px;font-weight:600;flex:1;color:#e8e8ee;line-height:1}
+      #${PID} .engine{display:flex;align-items:center;gap:4px;font-size:11px;
+        color:#888;font-variant-numeric:tabular-nums}
+      #${PID} .engine .fps-in{width:38px;background:#1a1a24;color:#e8e8ee;
+        border:1px solid #333;border-radius:3px;padding:1px 3px;font-size:11px;
+        font-family:inherit;text-align:right;line-height:1.2}
+      #${PID} .engine .fps-sep{color:#555}
+      #${PID} .engine .fps-actual{min-width:22px;text-align:right;color:#9c9}
       #${PID} button{background:#2a2a38;color:#e8e8ee;border:1px solid #444;
         border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;
         line-height:1;margin:0;font-family:inherit}
@@ -334,6 +341,11 @@
     </style>
     <div class="head">
       <div class="title">auto</div>
+      <span class="engine" title="engine tick rate (frames/sec) — desired | actual">
+        <input type="number" class="fps-in" min="1" max="100" step="1" value="${engineFps}" title="desired FPS (1-100)">
+        <span class="fps-sep">│</span>
+        <span class="fps-actual" title="actual ticks in the last second">—</span>
+      </span>
       <button data-act="copy" title="copy state JSON to clipboard">JSON</button>
       <button data-act="collapse" title="collapse">–</button>
       <button data-act="stop" title="stop &amp; remove">×</button>
@@ -415,6 +427,13 @@
 
   panel.addEventListener('change', (e) => {
     const t = e.target;
+    if (t.classList && t.classList.contains('fps-in')) {
+      engineFps = clampFps(t.value);
+      t.value = engineFps;
+      startEngine();
+      saveSettings();
+      return;
+    }
     const { name, prop } = t.dataset;
     if (!name || !prop) return;
     if (t.type === 'checkbox') {
@@ -489,7 +508,7 @@
   const head = panel.querySelector('.head');
   let drag = null;
   head.addEventListener('mousedown', (e) => {
-    if (e.target.tagName === 'BUTTON') return;
+    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || (e.target.closest && e.target.closest('.engine'))) return;
     const r = panel.getBoundingClientRect();
     drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
     e.preventDefault();
@@ -524,6 +543,8 @@
     panel.querySelector('.uptime').textContent = Math.floor((now - startedAt) / 1000) + 's';
     const total = Object.values(stats).reduce((a, s) => a + s.fires, 0);
     panel.querySelector('.totals').textContent = total + ' fires';
+    const fpsEl = panel.querySelector('.fps-actual');
+    if (fpsEl) fpsEl.textContent = String(actualFps);
   }
 
   const api = {
