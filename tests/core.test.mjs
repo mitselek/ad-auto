@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused } from '../src/core.mjs';
+import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused, shouldFireEpTt } from '../src/core.mjs';
 
 describe('encodeBookmarklet', () => {
   test('wraps body with javascript: prefix and void(0); suffix', () => {
@@ -628,5 +628,20 @@ describe('isTabFullyPaused', () => {
 
   test('false for a tab with no mechanics (nothing to pause)', () => {
     expect(isTabFullyPaused(config, 'Nonexistent')).toBe(false);
+  });
+});
+
+describe('shouldFireEpTt', () => {
+  test('EP Mult disabled: EP TT may always fire (nothing to defer to)', () => {
+    expect(shouldFireEpTt({ epMultEnabled: false, epMultHadTurnThisTick: false })).toBe(true);
+    expect(shouldFireEpTt({ epMultEnabled: false, epMultHadTurnThisTick: true })).toBe(true);
+  });
+
+  test('EP Mult enabled and it had its turn this tick: EP TT may fire', () => {
+    expect(shouldFireEpTt({ epMultEnabled: true, epMultHadTurnThisTick: true })).toBe(true);
+  });
+
+  test('EP Mult enabled but did not get its turn this tick: EP TT is held', () => {
+    expect(shouldFireEpTt({ epMultEnabled: true, epMultHadTurnThisTick: false })).toBe(false);
   });
 });

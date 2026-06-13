@@ -12,7 +12,11 @@
     replGalaxy:         { tab: 'Infinity', label: 'Repl Galaxy',       enabled: false, period: 50,   amount: null },
     buyMaxIPMult:       { tab: 'Infinity', label: 'Max IPMult',        enabled: false, period: 200,  amount: null },
     eternity:           { tab: 'Infinity', label: 'Eternity',          enabled: false, period: 100,  amount: null },
-    buyMaxTD:  { tab: 'Eternity', label: 'Max TDs',    enabled: false, period: 200,  amount: null },
+    buyMaxTD:     { tab: 'Eternity', label: 'Max TDs',     enabled: false, period: 200, amount: null },
+    amTT:         { tab: 'Eternity', label: 'TT from AM',  enabled: false, period: 200, amount: null },
+    ipTT:         { tab: 'Eternity', label: 'TT from IP',  enabled: false, period: 200, amount: null },
+    buyMaxEPMult: { tab: 'Eternity', label: 'Max EP Mult', enabled: false, period: 200, amount: null },
+    epTT:         { tab: 'Eternity', label: 'TT from EP',  enabled: false, period: 200, amount: null },
     dilatedEternity: { tab: 'Dilation', label: 'Dilated Eternity', enabled: false, period: 100, amount: null },
   };
 
@@ -39,6 +43,7 @@
   let fpsBuf = [];
   let actualFps = 0;
   let crunchReadyAt = null;
+  let tickNow = 0;
   let currentTab = null;
   const tabEnabledMemory = {}; // tab -> names enabled before a "disable all" (for restore)
   Object.assign(tabEnabledMemory, sanitizeTabMemory(stored?.ui?.tabMemory, config));
@@ -76,7 +81,20 @@
     dilatedEternity: ['startDilatedEternity', 'Dilation.requestStartDilation'],
   };
 
+  const buyMaxTTWith = (type) => {
+    const t = window.TimeTheoremPurchaseType && window.TimeTheoremPurchaseType[type];
+    if (t == null || typeof t.purchase !== 'function') throw new Error(`[auto] TT ${type}: TimeTheoremPurchaseType.${type} missing`);
+    t.purchase(true);
+  };
   const customDispatchers = {
+    amTT: () => buyMaxTTWith('am'),
+    ipTT: () => buyMaxTTWith('ip'),
+    epTT: () => buyMaxTTWith('ep'),
+    buyMaxEPMult: () => {
+      const u = window.EternityUpgrade && window.EternityUpgrade.epMult;
+      if (u == null || typeof u.buyMax !== 'function') throw new Error('[auto] buyMaxEPMult: EternityUpgrade.epMult missing');
+      u.buyMax(true);
+    },
     buyMaxReplUpgrades: () => {
       const buyToMax = (target) => {
         if (target == null || typeof target.purchase !== 'function') return;
@@ -128,6 +146,14 @@
       return typeof nb.gte === 'function' ? nb.gte(cfg.amount) : Number(nb) >= cfg.amount;
     },
     crunch: (cfg) => gateCrunch(cfg.amount, () => resolveRaw(peakProbes.gip), window.Decimal),
+    // EP TT defers to Max EP Mult: it only fires on a tick where EP Mult also got
+    // its turn (so EP Mult always has first dibs on EP). This intentionally couples
+    // EP TT's cadence to EP Mult's — if EP Mult's period is set longer than EP TT's,
+    // EP TT is throttled down to EP Mult's period. If EP Mult is disabled, EP TT runs freely.
+    epTT: () => shouldFireEpTt({
+      epMultEnabled: config.buyMaxEPMult.enabled,
+      epMultHadTurnThisTick: lastAttempt.buyMaxEPMult === tickNow,
+    }),
   };
 
   const STATE_PROBES = {
@@ -168,8 +194,8 @@
     return out;
   }
 
-  const stats = {}, lastRun = {};
-  for (const k of Object.keys(config)) { stats[k] = { fires: 0, errs: 0 }; lastRun[k] = 0; }
+  const stats = {}, lastRun = {}, lastAttempt = {};
+  for (const k of Object.keys(config)) { stats[k] = { fires: 0, errs: 0 }; lastRun[k] = 0; lastAttempt[k] = 0; }
   const peakProbes = {
     gip: ['gainedInfinityPoints'],
     tMs: ['player.records.thisInfinity.time'],
@@ -180,6 +206,7 @@
 
   function mainTick() {
     const now = performance.now();
+    tickNow = now;
     fpsBuf.push(now);
     fpsBuf = trimWindow(fpsBuf, now, 1000);
     actualFps = fpsBuf.length;
@@ -205,6 +232,7 @@
       }
       if (now - lastRun[name] < cfg.period) continue;
       if (gates[name] && !gates[name](cfg)) continue;
+      lastAttempt[name] = now; // got its turn this tick (period + gate passed), even if dispatch throws
       try {
         dispatch(name);
         stats[name].fires++;
@@ -389,6 +417,8 @@
     paneEls[tab] = pane;
   }
 
+  // actions whose gate reads cfg.amount — only these get a user-editable amount input
+  const amountGated = new Set(['sacrifice', 'crunch']);
   for (const [name, cfg] of Object.entries(config)) {
     if (name === 'crunch') {
       const pr = document.createElement('div');
@@ -401,7 +431,7 @@
       `;
       paneEls[cfg.tab].appendChild(pr);
     }
-    const hasGate = name in gates;
+    const hasAmountGate = amountGated.has(name);
     const amtType = name === 'crunch' ? 'text' : 'number';
     const amtAttrs = name === 'crunch' ? 'readonly' : 'min="0" step="1"';
     const row = document.createElement('div');
@@ -410,7 +440,7 @@
       <input type="checkbox" data-name="${name}" data-prop="enabled" ${cfg.enabled ? 'checked' : ''}>
       <span class="name" title="${cfg.label}">${cfg.label}</span>
       <input type="number" data-name="${name}" data-prop="period" value="${cfg.period}" min="0" step="50" title="period (ms) between fires">
-      <input type="${amtType}" data-name="${name}" data-prop="amount" value="${cfg.amount ?? ''}" ${amtAttrs} placeholder="${hasGate ? '—' : 'n/a'}" ${hasGate ? '' : 'disabled'} title="${hasGate ? 'minimum amount gate (blank = off)' : 'no gate defined for this action'}">
+      <input type="${amtType}" data-name="${name}" data-prop="amount" value="${cfg.amount ?? ''}" ${amtAttrs} placeholder="${hasAmountGate ? '—' : 'n/a'}" ${hasAmountGate ? '' : 'disabled'} title="${hasAmountGate ? 'minimum amount gate (blank = off)' : 'no amount gate for this action'}">
       <span class="stats">0</span>
     `;
     paneEls[cfg.tab].appendChild(row);

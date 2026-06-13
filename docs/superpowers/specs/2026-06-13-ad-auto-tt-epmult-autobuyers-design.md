@@ -77,28 +77,29 @@ const buyMaxTTWith = (type) => {
 
 ### 3. EP-TT ordering gate ("same cadence")
 
-A tick-scoped `let tickNow = 0;` is set at the top of `mainTick` (`tickNow = now;`). A new gate on `epTT`:
+A tick-scoped `let tickNow = 0;` is set at the top of `mainTick` (`tickNow = now;`). A new `lastAttempt` table (seeded like `lastRun`) records when each action *got its turn* this tick — set right after the period + gate checks pass, **before** `dispatch`, so it advances even if dispatch throws. A new gate on `epTT`:
 
 ```js
 gates.epTT = (cfg) => shouldFireEpTt({
   epMultEnabled: config.buyMaxEPMult.enabled,
-  epMultRanThisTick: lastRun.buyMaxEPMult === tickNow,
+  epMultHadTurnThisTick: lastAttempt.buyMaxEPMult === tickNow,
 });
 ```
 
 The decision is extracted as a pure function in `src/core.mjs`:
 
 ```js
-export function shouldFireEpTt({ epMultEnabled, epMultRanThisTick }) {
+export function shouldFireEpTt({ epMultEnabled, epMultHadTurnThisTick }) {
   if (!epMultEnabled) return true;       // nothing to defer to
-  return epMultRanThisTick;              // EP Mult already had first dibs this tick
+  return epMultHadTurnThisTick;          // EP Mult already had its turn this tick
 }
 ```
 
 Why this works:
-- `buyMaxEPMult` sits earlier in config order, so the main loop dispatches it first and sets `lastRun.buyMaxEPMult = now` (the existing loop already does this on successful dispatch).
-- When the loop reaches `epTT`, `tickNow === now`, so `lastRun.buyMaxEPMult === tickNow` is true **iff** EP Mult dispatched this very tick → `epTT` may proceed.
-- If EP Mult was throttled (its period not yet elapsed) or skipped this tick, `lastRun.buyMaxEPMult !== tickNow` → `epTT` is held until a tick where EP Mult runs again.
+- `buyMaxEPMult` sits earlier in config order, so the main loop reaches it first and sets `lastAttempt.buyMaxEPMult = now` once its period + gate pass.
+- When the loop reaches `epTT`, `tickNow === now`, so `lastAttempt.buyMaxEPMult === tickNow` is true **iff** EP Mult got its turn this very tick → `epTT` may proceed.
+- If EP Mult was throttled (its period not yet elapsed) this tick, `lastAttempt.buyMaxEPMult !== tickNow` → `epTT` is held until a tick where EP Mult runs again. This intentionally couples `epTT`'s cadence to EP Mult's (per the "same cadence" requirement): setting EP Mult's period longer than `epTT`'s throttles `epTT` down to EP Mult's period.
+- **"Had its turn" = attempted, not succeeded.** `lastAttempt` advances before `dispatch`, so a throwing or no-op EP Mult (which spends no EP) does not starve `epTT`. Using `lastRun` (which only advances on success) would permanently block `epTT` if EP Mult's global were missing.
 - If the user disables EP Mult entirely, the first clause lets `epTT` run on its own period (there is no EP Mult to order against).
 
 `epTT` still passes the generic period check first (`now - lastRun.epTT < cfg.period`), so a user may throttle `epTT` slower than EP Mult; it simply can never fire on a tick where EP Mult didn't.

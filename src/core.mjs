@@ -188,3 +188,12 @@ export function isTabFullyPaused(config, tab) {
   const onTab = Object.values(config).filter((c) => c.tab === tab);
   return onTab.length > 0 && onTab.every((c) => !c.enabled);
 }
+
+// EP-TT ordering gate: EP TT may fire only after Max EP Mult has had its turn
+// this tick. "Had its turn" means it was attempted (so a throwing/no-op EP Mult,
+// which spends no EP, doesn't starve EP TT) — not that it succeeded. When EP Mult
+// is disabled there is nothing to defer to, so allow EP TT freely.
+export function shouldFireEpTt({ epMultEnabled, epMultHadTurnThisTick }) {
+  if (!epMultEnabled) return true;
+  return epMultHadTurnThisTick;
+}
