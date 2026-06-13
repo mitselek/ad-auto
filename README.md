@@ -14,12 +14,21 @@ Copy the long `// javascript:...` line under `// START:` in `ad-auto.js` (withou
 
 ## Features
 
-- Auto-fire actions: Max All, Dim Boost, Galaxy, Sacrifice, Crunch, Max IDs, Max Repl, Eternity, Max TDs, Dilated Eternity.
+- Auto-fire actions:
+  - **AD:** Max All, Dim Boost, Galaxy, Sacrifice, Crunch.
+  - **Infinity:** Max IDs, Max Repl Upgrades, Repl Galaxy, Max IPMult, Eternity.
+  - **Eternity:** Max TDs, TT from AM, TT from IP, Max EP Mult, TT from EP.
+  - **Dilation:** Dilated Eternity.
 - Per-action enable, period, and amount gates.
 - Sacrifice nextBoost threshold.
 - Crunch fires only when `gainedInfinityPoints >= amount`.
+- Time-Theorem autobuyers per currency (AM / IP / EP). EP TT defers to Max EP Mult so the multiplier always gets first dibs on EP each tick (see the spec under `docs/superpowers/specs/`).
 - Peak IP/min tracker (since last crunch). Click the displayed value to copy IP-at-peak into the crunch amount.
-- Tab strip (AD / Infinity / Eternity / Dilation). Draggable, collapsible panel. State persists in `localStorage` under `__auto_settings_v1`.
+- Tab strip (AD / Infinity / Eternity / Dilation). Clicking the **already-active** tab disables/enables all mechanics on it (remembers your enabled subset and restores it on the next click); fully-paused tabs render dimmed. Draggable, collapsible panel. State persists in `localStorage` under `__auto_settings_v1`.
+
+## Recorder (verifying behavior)
+
+`tools/auto-recorder.js` is a standalone console tool that wraps the AD methods the TT / EP-Mult autobuyers call and logs only the invocations that actually changed state — with sequence numbers and before/after snapshots, so call order and effects are captured as ground truth rather than described. Paste the whole file into the console after mounting the panel, enable the autobuyers, then run `__autoRec.copy()`. See the header comment in the file for details.
 
 ## Develop
 
