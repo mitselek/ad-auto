@@ -149,3 +149,42 @@ export function trimWindow(timestamps, now, windowMs) {
   while (i < timestamps.length && now - timestamps[i] >= windowMs) i++;
   return i === 0 ? timestamps : timestamps.slice(i);
 }
+
+// Master toggle for all mechanics on a tab (used when clicking the already-active tab).
+// states: [{ name, enabled }] for the tab; remembered: names enabled before the last
+// "disable all" (or null/empty). If anything is on → turn all off, remembering the on-set.
+// If all off → restore the remembered subset and clear memory; with no memory, enable all.
+export function toggleTabEnabled(states, remembered) {
+  const anyOn = states.some((s) => s.enabled);
+  if (anyOn) {
+    return {
+      states: states.map((s) => ({ name: s.name, enabled: false })),
+      remembered: states.filter((s) => s.enabled).map((s) => s.name),
+    };
+  }
+  const hasMemory = Array.isArray(remembered) && remembered.length > 0;
+  const set = hasMemory ? new Set(remembered) : null;
+  return {
+    states: states.map((s) => ({ name: s.name, enabled: set ? set.has(s.name) : true })),
+    remembered: null,
+  };
+}
+
+// Validate persisted tab memory on load: keep only names that still exist in config
+// and belong to the tab they're filed under; drop tabs that end up empty.
+export function sanitizeTabMemory(rawMemory, config) {
+  const out = {};
+  if (rawMemory == null || typeof rawMemory !== 'object') return out;
+  for (const [tab, names] of Object.entries(rawMemory)) {
+    if (!Array.isArray(names)) continue;
+    const valid = names.filter((n) => config[n] && config[n].tab === tab);
+    if (valid.length) out[tab] = valid;
+  }
+  return out;
+}
+
+// True when a tab has at least one mechanic and all of them are disabled.
+export function isTabFullyPaused(config, tab) {
+  const onTab = Object.values(config).filter((c) => c.tab === tab);
+  return onTab.length > 0 && onTab.every((c) => !c.enabled);
+}

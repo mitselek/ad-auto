@@ -40,6 +40,8 @@
   let actualFps = 0;
   let crunchReadyAt = null;
   let currentTab = null;
+  const tabEnabledMemory = {}; // tab -> names enabled before a "disable all" (for restore)
+  Object.assign(tabEnabledMemory, sanitizeTabMemory(stored?.ui?.tabMemory, config));
   function saveSettings() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -52,6 +54,7 @@
           collapsed: panel.classList.contains('collapsed'),
           left: panel.style.left || null,
           top:  panel.style.top  || null,
+          tabMemory: tabEnabledMemory,
         },
         lastIpMultCount,
         engineFps,
@@ -311,6 +314,7 @@
       #${PID} .tabs{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap}
       #${PID} .tabs button{padding:3px 9px}
       #${PID} .tabs button.active{background:#4a4a68;border-color:#666}
+      #${PID} .tabs button.all-paused{color:#888;font-style:italic;opacity:.7}
       #${PID} .pane{display:none}
       #${PID} .pane.active{display:block}
       #${PID} .row{display:grid;grid-template-columns:18px 1fr 56px 80px 56px;
@@ -369,6 +373,7 @@
     const tb = document.createElement('button');
     tb.textContent = tab;
     tb.dataset.tab = tab;
+    tb.title = 'switch tab; click the active tab to disable/enable all its mechanics';
     tabsEl.appendChild(tb);
 
     const pane = document.createElement('div');
@@ -421,9 +426,15 @@
       p.classList.toggle('active', t === tab);
     }
   }
+  function refreshPausedTabs() {
+    for (const btn of tabsEl.querySelectorAll('button')) {
+      btn.classList.toggle('all-paused', isTabFullyPaused(config, btn.dataset.tab));
+    }
+  }
   const initialTab = stored?.ui?.activeTab && tabs.includes(stored.ui.activeTab)
     ? stored.ui.activeTab : tabs[0];
   setActiveTab(initialTab);
+  refreshPausedTabs();
 
   panel.addEventListener('change', (e) => {
     const t = e.target;
@@ -438,6 +449,9 @@
     if (!name || !prop) return;
     if (t.type === 'checkbox') {
       config[name][prop] = t.checked;
+      // a manual enable/disable invalidates the remembered subset for that tab
+      delete tabEnabledMemory[config[name].tab];
+      refreshPausedTabs();
     } else if (t.type === 'number') {
       config[name][prop] = t.value === '' ? null : Number(t.value);
     }
@@ -459,7 +473,25 @@
       return;
     }
     const tab = e.target.dataset?.tab;
-    if (tab) { setActiveTab(tab); saveSettings(); return; }
+    if (tab) {
+      if (tab === currentTab) {
+        const states = Object.entries(config)
+          .filter(([, c]) => c.tab === tab)
+          .map(([name, c]) => ({ name, enabled: c.enabled }));
+        const res = toggleTabEnabled(states, tabEnabledMemory[tab]);
+        for (const s of res.states) {
+          config[s.name].enabled = s.enabled;
+          const cb = rowEls[s.name]?.querySelector('input[data-prop="enabled"]');
+          if (cb) cb.checked = s.enabled;
+        }
+        tabEnabledMemory[tab] = res.remembered;
+        refreshPausedTabs();
+      } else {
+        setActiveTab(tab);
+      }
+      saveSettings();
+      return;
+    }
     const act = e.target.dataset?.act;
     if (act === 'stop') api.stop();
     else if (act === 'collapse') { panel.classList.toggle('collapsed'); saveSettings(); }

@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow } from '../src/core.mjs';
+import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused } from '../src/core.mjs';
 
 describe('encodeBookmarklet', () => {
   test('wraps body with javascript: prefix and void(0); suffix', () => {
@@ -463,5 +463,170 @@ describe('trimWindow', () => {
     const buf = [0, 100, 600, 800, 950];
     // now=1000, window=1000: 0 -> 1000 expired; 100,600,800,950 survive
     expect(trimWindow(buf, 1000, 1000).length).toBe(4);
+  });
+});
+
+describe('toggleTabEnabled', () => {
+  test('mixed state: disables all and remembers the enabled subset', () => {
+    const out = toggleTabEnabled(
+      [{ name: 'a', enabled: true }, { name: 'b', enabled: false }, { name: 'c', enabled: true }],
+      null
+    );
+    expect(out.states).toEqual([
+      { name: 'a', enabled: false },
+      { name: 'b', enabled: false },
+      { name: 'c', enabled: false },
+    ]);
+    expect(out.remembered).toEqual(['a', 'c']);
+  });
+
+  test('all enabled: disables all and remembers all', () => {
+    const out = toggleTabEnabled(
+      [{ name: 'a', enabled: true }, { name: 'b', enabled: true }],
+      null
+    );
+    expect(out.states).toEqual([
+      { name: 'a', enabled: false },
+      { name: 'b', enabled: false },
+    ]);
+    expect(out.remembered).toEqual(['a', 'b']);
+  });
+
+  test('all disabled with a remembered set: restores exactly that subset and clears memory', () => {
+    const out = toggleTabEnabled(
+      [{ name: 'a', enabled: false }, { name: 'b', enabled: false }, { name: 'c', enabled: false }],
+      ['a', 'c']
+    );
+    expect(out.states).toEqual([
+      { name: 'a', enabled: true },
+      { name: 'b', enabled: false },
+      { name: 'c', enabled: true },
+    ]);
+    expect(out.remembered).toBe(null);
+  });
+
+  test('all disabled with no memory: enables all (so the tab is usable)', () => {
+    const out = toggleTabEnabled(
+      [{ name: 'a', enabled: false }, { name: 'b', enabled: false }],
+      null
+    );
+    expect(out.states).toEqual([
+      { name: 'a', enabled: true },
+      { name: 'b', enabled: true },
+    ]);
+    expect(out.remembered).toBe(null);
+  });
+
+  test('all disabled with an empty remembered array is treated as no memory: enables all', () => {
+    const out = toggleTabEnabled(
+      [{ name: 'a', enabled: false }, { name: 'b', enabled: false }],
+      []
+    );
+    expect(out.states).toEqual([
+      { name: 'a', enabled: true },
+      { name: 'b', enabled: true },
+    ]);
+    expect(out.remembered).toBe(null);
+  });
+
+  test('remembered names no longer present in the tab are ignored on restore', () => {
+    const out = toggleTabEnabled(
+      [{ name: 'a', enabled: false }, { name: 'b', enabled: false }],
+      ['a', 'gone']
+    );
+    expect(out.states).toEqual([
+      { name: 'a', enabled: true },
+      { name: 'b', enabled: false },
+    ]);
+    expect(out.remembered).toBe(null);
+  });
+
+  test('does not mutate the input states array or its objects', () => {
+    const input = [{ name: 'a', enabled: true }, { name: 'b', enabled: false }];
+    const snapshot = JSON.parse(JSON.stringify(input));
+    toggleTabEnabled(input, null);
+    expect(input).toEqual(snapshot);
+  });
+
+  test('empty tab: no-op with no memory', () => {
+    const out = toggleTabEnabled([], null);
+    expect(out.states).toEqual([]);
+    expect(out.remembered).toBe(null);
+  });
+});
+
+describe('sanitizeTabMemory', () => {
+  const config = {
+    maxAll: { tab: 'AD' },
+    galaxy: { tab: 'AD' },
+    crunch: { tab: 'AD' },
+    buyMaxID: { tab: 'Infinity' },
+  };
+
+  test('returns empty object for nullish or non-object input', () => {
+    expect(sanitizeTabMemory(null, config)).toEqual({});
+    expect(sanitizeTabMemory(undefined, config)).toEqual({});
+    expect(sanitizeTabMemory('nope', config)).toEqual({});
+    expect(sanitizeTabMemory(42, config)).toEqual({});
+  });
+
+  test('keeps only names that exist in config and belong to that tab', () => {
+    const out = sanitizeTabMemory({ AD: ['maxAll', 'galaxy'] }, config);
+    expect(out).toEqual({ AD: ['maxAll', 'galaxy'] });
+  });
+
+  test('drops names that do not exist in config', () => {
+    const out = sanitizeTabMemory({ AD: ['maxAll', 'ghost'] }, config);
+    expect(out).toEqual({ AD: ['maxAll'] });
+  });
+
+  test('drops names whose config tab does not match the memory key', () => {
+    // buyMaxID belongs to Infinity, not AD → dropped
+    const out = sanitizeTabMemory({ AD: ['maxAll', 'buyMaxID'] }, config);
+    expect(out).toEqual({ AD: ['maxAll'] });
+  });
+
+  test('omits tabs that end up with no valid names', () => {
+    const out = sanitizeTabMemory({ AD: ['ghost'], Infinity: ['buyMaxID'] }, config);
+    expect(out).toEqual({ Infinity: ['buyMaxID'] });
+  });
+
+  test('skips non-array values (e.g. persisted null memory)', () => {
+    const out = sanitizeTabMemory({ AD: null, Infinity: ['buyMaxID'] }, config);
+    expect(out).toEqual({ Infinity: ['buyMaxID'] });
+  });
+
+  test('does not mutate the input', () => {
+    const raw = { AD: ['maxAll', 'ghost'] };
+    const snap = JSON.parse(JSON.stringify(raw));
+    sanitizeTabMemory(raw, config);
+    expect(raw).toEqual(snap);
+  });
+});
+
+describe('isTabFullyPaused', () => {
+  const config = {
+    maxAll: { tab: 'AD', enabled: false },
+    galaxy: { tab: 'AD', enabled: false },
+    buyMaxID: { tab: 'Infinity', enabled: true },
+    buyMaxTD: { tab: 'Eternity', enabled: false },
+  };
+
+  test('true when every mechanic on the tab is disabled', () => {
+    expect(isTabFullyPaused(config, 'AD')).toBe(true);
+    expect(isTabFullyPaused(config, 'Eternity')).toBe(true);
+  });
+
+  test('false when at least one mechanic on the tab is enabled', () => {
+    expect(isTabFullyPaused(config, 'Infinity')).toBe(false);
+  });
+
+  test('false when one of several is enabled', () => {
+    const mixed = { a: { tab: 'X', enabled: false }, b: { tab: 'X', enabled: true } };
+    expect(isTabFullyPaused(mixed, 'X')).toBe(false);
+  });
+
+  test('false for a tab with no mechanics (nothing to pause)', () => {
+    expect(isTabFullyPaused(config, 'Nonexistent')).toBe(false);
   });
 });
