@@ -10,7 +10,7 @@
     buyMaxID:           { tab: 'Infinity', label: 'Max IDs',           enabled: false, period: 200,  amount: null },
     buyMaxReplUpgrades: { tab: 'Infinity', label: 'Max Repl Upgrades', enabled: false, period: 200,  amount: null },
     replGalaxy:         { tab: 'Infinity', label: 'Repl Galaxy',       enabled: false, period: 50,   amount: null },
-    replCrunch:         { tab: 'Infinity', label: 'Repl Crunch',       enabled: false, period: 200,  amount: 10 },
+    replCrunch:         { tab: 'Infinity', label: 'Repl Crunch',       enabled: false, period: 200,  amount: 10, eternityWhenStale: false },
     buyMaxIPMult:       { tab: 'Infinity', label: 'Max IPMult',        enabled: false, period: 200,  amount: null },
     eternity:           { tab: 'Infinity', label: 'Eternity',          enabled: false, period: 100,  amount: null },
     buyMaxTD:     { tab: 'Eternity', label: 'Max TDs',     enabled: false, period: 200, amount: null },
@@ -35,6 +35,9 @@
       if (saved.amount === null) config[n].amount = null;
       else if (n === 'crunch' && typeof saved.amount === 'string') config[n].amount = saved.amount;
       else if (typeof saved.amount === 'number') config[n].amount = saved.amount;
+      if (typeof saved.eternityWhenStale === 'boolean' && 'eternityWhenStale' in config[n]) {
+        config[n].eternityWhenStale = saved.eternityWhenStale;
+      }
     }
   }
   let lastIpMultCount = (stored && typeof stored.lastIpMultCount === 'number')
@@ -45,6 +48,7 @@
   let actualFps = 0;
   let crunchReadyAt = null;
   let replStability = { since: null, galaxies: null };
+  let warnedNoCanEternityProbe = false;
   let tickNow = 0;
   let currentTab = null;
   const tabEnabledMemory = {}; // tab -> names enabled before a "disable all" (for restore)
@@ -55,6 +59,7 @@
         v: 1,
         config: Object.fromEntries(Object.entries(config).map(([n, c]) => [n, {
           enabled: c.enabled, period: c.period, amount: c.amount,
+          eternityWhenStale: c.eternityWhenStale,
         }])),
         ui: {
           activeTab: currentTab,
@@ -110,6 +115,31 @@
       buyToMax(RU.interval);
       buyToMax(RU.galaxies);
     },
+    // Companion checkbox behavior: when the pending crunch's IP gain wouldn't
+    // exceed the IP we already hold, the run has gone stale — eternity instead.
+    // If eternity isn't available (or a probe is missing), crunch as usual.
+    replCrunch: () => {
+      const canEternityRaw = resolveRaw(['Player.canEternity', 'player.canEternity']);
+      if (config.replCrunch.eternityWhenStale && canEternityRaw == null && !warnedNoCanEternityProbe) {
+        warnedNoCanEternityProbe = true;
+        console.warn('[auto] replCrunch: eternity-when-stale is on but Player.canEternity was not found in this build; the row will always crunch');
+      }
+      if (config.replCrunch.eternityWhenStale && shouldEternityInstead({
+        gained: resolveRaw(['gainedInfinityPoints']),
+        held: resolveRaw(['Currency.infinityPoints.value', 'player.infinityPoints']),
+        canEternity: !!canEternityRaw,
+      })) {
+        const e = dispatchPaths(handlerPaths.eternity);
+        if (e.fired) {
+          stats.eternity.fires++;
+          console.info('[auto] replCrunch: stale run — fired eternity instead of crunch');
+          return e.result;
+        }
+      }
+      const r = dispatchPaths(handlerPaths.replCrunch);
+      if (!r.fired) throw new Error('[auto] replCrunch: no crunch handler resolved');
+      return r.result;
+    },
   };
 
   function resolveFn(path) {
@@ -127,18 +157,23 @@
     }
     return null;
   }
-  function dispatch(name) {
-    const custom = customDispatchers[name];
-    if (typeof custom === 'function') return custom();
-    for (const p of handlerPaths[name] || []) {
+  function dispatchPaths(paths) {
+    for (const p of paths || []) {
       const parts = p.split('.');
       const fnName = parts.pop();
       const receiver = parts.reduce((o, k) => (o == null ? o : o[k]), window);
       if (receiver != null && typeof receiver[fnName] === 'function') {
-        return receiver[fnName]();
+        return { fired: true, result: receiver[fnName]() };
       }
     }
-    throw new Error(`[auto] no handler resolved for ${name}`);
+    return { fired: false };
+  }
+  function dispatch(name) {
+    const custom = customDispatchers[name];
+    if (typeof custom === 'function') return custom();
+    const r = dispatchPaths(handlerPaths[name]);
+    if (!r.fired) throw new Error(`[auto] no handler resolved for ${name}`);
+    return r.result;
   }
 
   const gates = {
@@ -371,6 +406,7 @@
       #${PID} .row.hdr .lbl-hits{text-align:right}
       #${PID} .name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       #${PID} input[type=checkbox]{margin:0;cursor:pointer;width:14px;height:14px}
+      #${PID} .name .companion{width:11px;height:11px;margin-left:5px;vertical-align:-1px;accent-color:#96c}
       #${PID} input[type=number],#${PID} input[type=text]{width:100%;background:#1a1a24;color:#e8e8ee;
         border:1px solid #333;border-radius:3px;padding:2px 4px;
         font-size:11px;font-family:inherit;text-align:right;line-height:1.2}
@@ -453,11 +489,14 @@
     const hasAmountGate = amountGated.has(name);
     const amtType = name === 'crunch' ? 'text' : 'number';
     const amtAttrs = name === 'crunch' ? 'readonly' : 'min="0" step="1"';
+    const companion = 'eternityWhenStale' in cfg
+      ? `<input type="checkbox" class="companion" data-name="${name}" data-prop="eternityWhenStale" ${cfg.eternityWhenStale ? 'checked' : ''} title="eternity instead, when the crunch would gain no more IP than already held">`
+      : '';
     const row = document.createElement('div');
     row.className = 'row';
     row.innerHTML = `
       <input type="checkbox" data-name="${name}" data-prop="enabled" ${cfg.enabled ? 'checked' : ''}>
-      <span class="name" title="${cfg.label}">${cfg.label}</span>
+      <span class="name" title="${cfg.label}">${cfg.label}${companion}</span>
       <input type="number" data-name="${name}" data-prop="period" value="${cfg.period}" min="0" step="50" title="period (ms) between fires">
       <input type="${amtType}" data-name="${name}" data-prop="amount" value="${cfg.amount ?? ''}" ${amtAttrs} placeholder="${hasAmountGate ? '—' : 'n/a'}" ${hasAmountGate ? '' : 'disabled'} title="${hasAmountGate ? (amountTitles[name] ?? 'minimum amount gate (blank = off)') : 'no amount gate for this action'}">
       <span class="stats">0</span>
@@ -498,9 +537,11 @@
     if (!name || !prop) return;
     if (t.type === 'checkbox') {
       config[name][prop] = t.checked;
-      // a manual enable/disable invalidates the remembered subset for that tab
-      delete tabEnabledMemory[config[name].tab];
-      refreshPausedTabs();
+      if (prop === 'enabled') {
+        // a manual enable/disable invalidates the remembered subset for that tab
+        delete tabEnabledMemory[config[name].tab];
+        refreshPausedTabs();
+      }
     } else if (t.type === 'number') {
       config[name][prop] = t.value === '' ? null : Number(t.value);
     }
@@ -557,6 +598,7 @@
           enabled: c.enabled,
           period: c.period,
           amount: c.amount,
+          ...(c.eternityWhenStale !== undefined ? { eternityWhenStale: c.eternityWhenStale } : {}),
           fires: stats[n].fires,
           errs: stats[n].errs,
         }])),

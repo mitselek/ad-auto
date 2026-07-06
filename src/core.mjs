@@ -216,6 +216,23 @@ export function hasBeenStableFor({ since, now, stableMs }) {
   return now - since >= stableMs;
 }
 
+// Diminishing-returns escape for Repl Crunch: when the pending crunch would gain
+// no more IP than we already hold, the run is stale — eternity instead. Requires
+// the game to report eternity as available; missing probes fail closed (crunch).
+export function shouldEternityInstead({ gained, held, canEternity }) {
+  if (!canEternity) return false;
+  if (gained == null || held == null) return false;
+  if (typeof gained.lte === 'function') {
+    try { return gained.lte(held); } catch { return false; }
+  }
+  if (typeof held.gte === 'function') {
+    try { return held.gte(gained); } catch { return false; }
+  }
+  const g = Number(gained), h = Number(held);
+  if (!Number.isFinite(g) || !Number.isFinite(h)) return false;
+  return g <= h;
+}
+
 // The row's amount is the required stability window in seconds (blank = default).
 export function stableMsFromAmount(amount, defSeconds = 10) {
   if (amount == null || String(amount).trim() === '') return defSeconds * 1000;

@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused, shouldFireEpTt, isReplAtCap, updateReplStability, hasBeenStableFor, stableMsFromAmount } from '../src/core.mjs';
+import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused, shouldFireEpTt, isReplAtCap, updateReplStability, hasBeenStableFor, stableMsFromAmount, shouldEternityInstead } from '../src/core.mjs';
 
 describe('encodeBookmarklet', () => {
   test('wraps body with javascript: prefix and void(0); suffix', () => {
@@ -749,5 +749,54 @@ describe('stableMsFromAmount', () => {
 
   test('zero means fire immediately at cap', () => {
     expect(stableMsFromAmount(0)).toBe(0);
+  });
+});
+
+describe('shouldEternityInstead', () => {
+  const dec = (n) => ({ lte: (x) => n <= Number(x) });
+
+  test('false when eternity is not available, regardless of IP', () => {
+    expect(shouldEternityInstead({ gained: 1, held: 100, canEternity: false })).toBe(false);
+    expect(shouldEternityInstead({ gained: 1, held: 100, canEternity: null })).toBe(false);
+  });
+
+  test('true when the pending gain is at or below held IP', () => {
+    expect(shouldEternityInstead({ gained: 50, held: 100, canEternity: true })).toBe(true);
+    expect(shouldEternityInstead({ gained: 100, held: 100, canEternity: true })).toBe(true);
+  });
+
+  test('false when the pending gain still exceeds held IP', () => {
+    expect(shouldEternityInstead({ gained: 200, held: 100, canEternity: true })).toBe(false);
+  });
+
+  test('delegates to Decimal-like lte', () => {
+    expect(shouldEternityInstead({ gained: dec(50), held: 100, canEternity: true })).toBe(true);
+    expect(shouldEternityInstead({ gained: dec(200), held: 100, canEternity: true })).toBe(false);
+  });
+
+  test('fails closed on missing probes', () => {
+    expect(shouldEternityInstead({ gained: null, held: 100, canEternity: true })).toBe(false);
+    expect(shouldEternityInstead({ gained: 50, held: null, canEternity: true })).toBe(false);
+  });
+
+  test('fails closed when the Decimal comparison throws', () => {
+    expect(shouldEternityInstead({ gained: { lte: () => { throw new Error('boom'); } }, held: 1, canEternity: true })).toBe(false);
+  });
+
+  test('fails closed on non-numeric plain values', () => {
+    expect(shouldEternityInstead({ gained: 'nope', held: 100, canEternity: true })).toBe(false);
+  });
+
+  test('plain gained with Decimal-like held delegates to held.gte', () => {
+    const heldDec = (n) => ({ gte: (x) => n >= Number(x) });
+    expect(shouldEternityInstead({ gained: 50, held: heldDec(100), canEternity: true })).toBe(true);
+    expect(shouldEternityInstead({ gained: 200, held: heldDec(100), canEternity: true })).toBe(false);
+  });
+
+  test('fails closed when plain values overflow the double range', () => {
+    // both coerce to Infinity — must NOT be read as gained <= held
+    expect(shouldEternityInstead({ gained: '1e500', held: '1e400', canEternity: true })).toBe(false);
+    expect(shouldEternityInstead({ gained: Infinity, held: Infinity, canEternity: true })).toBe(false);
+    expect(shouldEternityInstead({ gained: 50, held: Infinity, canEternity: true })).toBe(false);
   });
 });
