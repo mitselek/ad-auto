@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused, shouldFireEpTt, isReplAtCap, updateReplStability, shouldBreakInfinity, stableMsFromAmount } from '../src/core.mjs';
+import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused, shouldFireEpTt, isReplAtCap, updateReplStability, hasBeenStableFor, stableMsFromAmount } from '../src/core.mjs';
 
 describe('encodeBookmarklet', () => {
   test('wraps body with javascript: prefix and void(0); suffix', () => {
@@ -714,19 +714,19 @@ describe('updateReplStability', () => {
   });
 });
 
-describe('shouldBreakInfinity', () => {
-  test('false when infinity is already broken', () => {
-    expect(shouldBreakInfinity({ broken: true, since: 0, now: 99999, stableMs: 1000 })).toBe(false);
+describe('hasBeenStableFor', () => {
+  test('false while no stability clock is running', () => {
+    expect(hasBeenStableFor({ since: null, now: 5000, stableMs: 1000 })).toBe(false);
   });
 
-  test('false while no stability clock is running', () => {
-    expect(shouldBreakInfinity({ broken: false, since: null, now: 5000, stableMs: 1000 })).toBe(false);
+  test('false when now is missing', () => {
+    expect(hasBeenStableFor({ since: 1000, now: null, stableMs: 1000 })).toBe(false);
   });
 
   test('false before the window elapses, true at and after it', () => {
-    expect(shouldBreakInfinity({ broken: false, since: 1000, now: 1999, stableMs: 1000 })).toBe(false);
-    expect(shouldBreakInfinity({ broken: false, since: 1000, now: 2000, stableMs: 1000 })).toBe(true);
-    expect(shouldBreakInfinity({ broken: false, since: 1000, now: 9000, stableMs: 1000 })).toBe(true);
+    expect(hasBeenStableFor({ since: 1000, now: 1999, stableMs: 1000 })).toBe(false);
+    expect(hasBeenStableFor({ since: 1000, now: 2000, stableMs: 1000 })).toBe(true);
+    expect(hasBeenStableFor({ since: 1000, now: 9000, stableMs: 1000 })).toBe(true);
   });
 });
 

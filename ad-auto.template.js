@@ -10,7 +10,7 @@
     buyMaxID:           { tab: 'Infinity', label: 'Max IDs',           enabled: false, period: 200,  amount: null },
     buyMaxReplUpgrades: { tab: 'Infinity', label: 'Max Repl Upgrades', enabled: false, period: 200,  amount: null },
     replGalaxy:         { tab: 'Infinity', label: 'Repl Galaxy',       enabled: false, period: 50,   amount: null },
-    breakInfinity:      { tab: 'Infinity', label: 'Break Infinity',    enabled: false, period: 200,  amount: 10 },
+    replCrunch:         { tab: 'Infinity', label: 'Repl Crunch',       enabled: false, period: 200,  amount: 10 },
     buyMaxIPMult:       { tab: 'Infinity', label: 'Max IPMult',        enabled: false, period: 200,  amount: null },
     eternity:           { tab: 'Infinity', label: 'Eternity',          enabled: false, period: 100,  amount: null },
     buyMaxTD:     { tab: 'Eternity', label: 'Max TDs',     enabled: false, period: 200, amount: null },
@@ -77,7 +77,7 @@
     crunch:          ['manualBigCrunchResetRequest'],
     buyMaxID:        ['buyMaxInfinityDimensions', 'InfinityDimensions.buyMax'],
     replGalaxy:      ['replicantiGalaxy'],
-    breakInfinity:   ['breakInfinity'],
+    replCrunch:      ['manualBigCrunchResetRequest'],
     buyMaxIPMult:    ['InfinityUpgrade.ipMult.buyMax'],
     eternity:        ['eternity', 'requestEternity', 'manualRequestEternity'],
     buyMaxTD:        ['maxAllTimeDimensions', 'buyMaxTimeDimensions', 'TimeDimensions.buyMax'],
@@ -149,15 +149,15 @@
       return typeof nb.gte === 'function' ? nb.gte(cfg.amount) : Number(nb) >= cfg.amount;
     },
     crunch: (cfg) => gateCrunch(cfg.amount, () => resolveRaw(peakProbes.gip), window.Decimal),
-    // Break Infinity is a toggle in-game; fire it exactly once, when replicanti has
-    // sat at cap ("Infinite") with no repl-galaxy purchases for `amount` seconds.
-    breakInfinity: (cfg) => {
-      if (resolveRaw(['player.break'])) return false;
+    // Big Crunch, held until replicanti has sat at cap ("Infinite") with no
+    // repl-galaxy purchases for `amount` seconds — i.e. galaxy farming is done.
+    // Replicanti persists through crunches, so once stable this keeps crunching
+    // every `period` ms until disabled or something resets replicanti.
+    replCrunch: (cfg) => {
       const amt = resolveRaw(['Currency.replicanti.value', 'Replicanti.amount', 'player.replicanti.amount']);
       const galaxies = resolveRaw(['player.replicanti.galaxies', 'Replicanti.galaxies.bought']);
       replStability = updateReplStability(replStability, { atCap: isReplAtCap(amt), galaxies, now: tickNow });
-      return shouldBreakInfinity({
-        broken: false,
+      return hasBeenStableFor({
         since: replStability.since,
         now: tickNow,
         stableMs: stableMsFromAmount(cfg.amount),
@@ -436,8 +436,8 @@
   }
 
   // actions whose gate reads cfg.amount — only these get a user-editable amount input
-  const amountGated = new Set(['sacrifice', 'crunch', 'breakInfinity']);
-  const amountTitles = { breakInfinity: 'seconds replicanti must stay Infinite before breaking (blank = 10)' };
+  const amountGated = new Set(['sacrifice', 'crunch', 'replCrunch']);
+  const amountTitles = { replCrunch: 'seconds replicanti must stay Infinite before crunching (blank = 10)' };
   for (const [name, cfg] of Object.entries(config)) {
     if (name === 'crunch') {
       const pr = document.createElement('div');

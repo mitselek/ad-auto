@@ -211,8 +211,7 @@ export function updateReplStability(prev, sample) {
   return { since: prev.since, galaxies };
 }
 
-export function shouldBreakInfinity({ broken, since, now, stableMs }) {
-  if (broken) return false;
+export function hasBeenStableFor({ since, now, stableMs }) {
   if (since == null || now == null) return false;
   return now - since >= stableMs;
 }

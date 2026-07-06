@@ -16,13 +16,13 @@ Copy the long `// javascript:...` line under `// START:` in `ad-auto.js` (withou
 
 - Auto-fire actions:
   - **AD:** Max All, Dim Boost, Galaxy, Sacrifice, Crunch.
-  - **Infinity:** Max IDs, Max Repl Upgrades, Repl Galaxy, Break Infinity, Max IPMult, Eternity.
+  - **Infinity:** Max IDs, Max Repl Upgrades, Repl Galaxy, Repl Crunch, Max IPMult, Eternity.
   - **Eternity:** Max TDs, TT from AM, TT from IP, Max EP Mult, TT from EP.
   - **Dilation:** Dilated Eternity.
 - Per-action enable, period, and amount gates.
 - Sacrifice nextBoost threshold.
 - Crunch fires only when `gainedInfinityPoints >= amount`.
-- Break Infinity fires once, when replicanti has stayed at cap ("Infinite") with no replicanti-galaxy purchases for `amount` seconds (blank = 10). A galaxy buy or any dip below cap restarts the clock; once `player.break` is true it never fires again.
+- Repl Crunch holds Big Crunch until replicanti has stayed at cap ("Infinite") with no replicanti-galaxy purchases for `amount` seconds (blank = 10) — i.e. galaxy farming is done. A galaxy buy or any dip below cap restarts the clock. Replicanti persists through crunches, so once stable it keeps crunching every `period` ms.
 - Time-Theorem autobuyers per currency (AM / IP / EP). EP TT defers to Max EP Mult so the multiplier always gets first dibs on EP each tick (see the spec under `docs/superpowers/specs/`).
 - Peak IP/min tracker (since last crunch). Click the displayed value to copy IP-at-peak into the crunch amount.
 - Tab strip (AD / Infinity / Eternity / Dilation). Clicking the **already-active** tab disables/enables all mechanics on it (remembers your enabled subset and restores it on the next click); fully-paused tabs render dimmed. Draggable, collapsible panel. State persists in `localStorage` under `__auto_settings_v1`.
