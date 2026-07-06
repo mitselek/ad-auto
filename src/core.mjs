@@ -189,6 +189,42 @@ export function isTabFullyPaused(config, tab) {
   return onTab.length > 0 && onTab.every((c) => !c.enabled);
 }
 
+// Pre-break, replicanti caps at Number.MAX_VALUE (shown as "Infinite" in-game).
+export function isReplAtCap(amount) {
+  if (amount == null) return false;
+  if (typeof amount.gte === 'function') {
+    try { return amount.gte(Number.MAX_VALUE); } catch { return false; }
+  }
+  const n = Number(amount);
+  return n >= Number.MAX_VALUE;
+}
+
+// Tracks how long replicanti has been pinned at cap. prev: { since, galaxies };
+// sample: { atCap, galaxies, now }. Dropping below cap clears the clock; a change
+// in replicanti-galaxy count restarts it (a galaxy purchase resets replicanti to 1,
+// but a fast regrow could hide the dip between samples).
+export function updateReplStability(prev, sample) {
+  const { atCap, galaxies, now } = sample;
+  if (!atCap) return { since: null, galaxies };
+  const galaxiesChanged = prev.galaxies != null && galaxies != null && galaxies !== prev.galaxies;
+  if (prev.since == null || galaxiesChanged) return { since: now, galaxies };
+  return { since: prev.since, galaxies };
+}
+
+export function shouldBreakInfinity({ broken, since, now, stableMs }) {
+  if (broken) return false;
+  if (since == null || now == null) return false;
+  return now - since >= stableMs;
+}
+
+// The row's amount is the required stability window in seconds (blank = default).
+export function stableMsFromAmount(amount, defSeconds = 10) {
+  if (amount == null || String(amount).trim() === '') return defSeconds * 1000;
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n < 0) return defSeconds * 1000;
+  return n * 1000;
+}
+
 // EP-TT ordering gate: EP TT may fire only after Max EP Mult has had its turn
 // this tick. "Had its turn" means it was attempted (so a throwing/no-op EP Mult,
 // which spends no EP, doesn't starve EP TT) — not that it succeeded. When EP Mult

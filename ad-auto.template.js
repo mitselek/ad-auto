@@ -10,6 +10,7 @@
     buyMaxID:           { tab: 'Infinity', label: 'Max IDs',           enabled: false, period: 200,  amount: null },
     buyMaxReplUpgrades: { tab: 'Infinity', label: 'Max Repl Upgrades', enabled: false, period: 200,  amount: null },
     replGalaxy:         { tab: 'Infinity', label: 'Repl Galaxy',       enabled: false, period: 50,   amount: null },
+    breakInfinity:      { tab: 'Infinity', label: 'Break Infinity',    enabled: false, period: 200,  amount: 10 },
     buyMaxIPMult:       { tab: 'Infinity', label: 'Max IPMult',        enabled: false, period: 200,  amount: null },
     eternity:           { tab: 'Infinity', label: 'Eternity',          enabled: false, period: 100,  amount: null },
     buyMaxTD:     { tab: 'Eternity', label: 'Max TDs',     enabled: false, period: 200, amount: null },
@@ -43,6 +44,7 @@
   let fpsBuf = [];
   let actualFps = 0;
   let crunchReadyAt = null;
+  let replStability = { since: null, galaxies: null };
   let tickNow = 0;
   let currentTab = null;
   const tabEnabledMemory = {}; // tab -> names enabled before a "disable all" (for restore)
@@ -75,6 +77,7 @@
     crunch:          ['manualBigCrunchResetRequest'],
     buyMaxID:        ['buyMaxInfinityDimensions', 'InfinityDimensions.buyMax'],
     replGalaxy:      ['replicantiGalaxy'],
+    breakInfinity:   ['breakInfinity'],
     buyMaxIPMult:    ['InfinityUpgrade.ipMult.buyMax'],
     eternity:        ['eternity', 'requestEternity', 'manualRequestEternity'],
     buyMaxTD:        ['maxAllTimeDimensions', 'buyMaxTimeDimensions', 'TimeDimensions.buyMax'],
@@ -146,6 +149,20 @@
       return typeof nb.gte === 'function' ? nb.gte(cfg.amount) : Number(nb) >= cfg.amount;
     },
     crunch: (cfg) => gateCrunch(cfg.amount, () => resolveRaw(peakProbes.gip), window.Decimal),
+    // Break Infinity is a toggle in-game; fire it exactly once, when replicanti has
+    // sat at cap ("Infinite") with no repl-galaxy purchases for `amount` seconds.
+    breakInfinity: (cfg) => {
+      if (resolveRaw(['player.break'])) return false;
+      const amt = resolveRaw(['Currency.replicanti.value', 'Replicanti.amount', 'player.replicanti.amount']);
+      const galaxies = resolveRaw(['player.replicanti.galaxies', 'Replicanti.galaxies.bought']);
+      replStability = updateReplStability(replStability, { atCap: isReplAtCap(amt), galaxies, now: tickNow });
+      return shouldBreakInfinity({
+        broken: false,
+        since: replStability.since,
+        now: tickNow,
+        stableMs: stableMsFromAmount(cfg.amount),
+      });
+    },
     // EP TT defers to Max EP Mult: it only fires on a tick where EP Mult also got
     // its turn (so EP Mult always has first dibs on EP). This intentionally couples
     // EP TT's cadence to EP Mult's — if EP Mult's period is set longer than EP TT's,
@@ -166,6 +183,7 @@
     replicanti:     ['Currency.replicanti.value', 'Replicanti.amount', 'player.replicanti.amount'],
     dimBoosts:      ['DimBoost.purchasedBoosts', 'DimBoost.totalBoosts', 'player.dimensionBoosts'],
     galaxies:       ['player.galaxies'],
+    replGalaxies:   ['player.replicanti.galaxies', 'Replicanti.galaxies.bought'],
     sacrificeMult:  ['Sacrifice.totalBoost'],
     bestInfTimeS:   ['player.records.bestInfinity.time', 'player.bestInfinityTime'],
     thisInfTimeS:   ['player.records.thisInfinity.time'],
@@ -418,7 +436,8 @@
   }
 
   // actions whose gate reads cfg.amount — only these get a user-editable amount input
-  const amountGated = new Set(['sacrifice', 'crunch']);
+  const amountGated = new Set(['sacrifice', 'crunch', 'breakInfinity']);
+  const amountTitles = { breakInfinity: 'seconds replicanti must stay Infinite before breaking (blank = 10)' };
   for (const [name, cfg] of Object.entries(config)) {
     if (name === 'crunch') {
       const pr = document.createElement('div');
@@ -440,7 +459,7 @@
       <input type="checkbox" data-name="${name}" data-prop="enabled" ${cfg.enabled ? 'checked' : ''}>
       <span class="name" title="${cfg.label}">${cfg.label}</span>
       <input type="number" data-name="${name}" data-prop="period" value="${cfg.period}" min="0" step="50" title="period (ms) between fires">
-      <input type="${amtType}" data-name="${name}" data-prop="amount" value="${cfg.amount ?? ''}" ${amtAttrs} placeholder="${hasAmountGate ? '—' : 'n/a'}" ${hasAmountGate ? '' : 'disabled'} title="${hasAmountGate ? 'minimum amount gate (blank = off)' : 'no amount gate for this action'}">
+      <input type="${amtType}" data-name="${name}" data-prop="amount" value="${cfg.amount ?? ''}" ${amtAttrs} placeholder="${hasAmountGate ? '—' : 'n/a'}" ${hasAmountGate ? '' : 'disabled'} title="${hasAmountGate ? (amountTitles[name] ?? 'minimum amount gate (blank = off)') : 'no amount gate for this action'}">
       <span class="stats">0</span>
     `;
     paneEls[cfg.tab].appendChild(row);

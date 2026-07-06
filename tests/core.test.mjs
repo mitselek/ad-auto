@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused, shouldFireEpTt } from '../src/core.mjs';
+import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused, shouldFireEpTt, isReplAtCap, updateReplStability, shouldBreakInfinity, stableMsFromAmount } from '../src/core.mjs';
 
 describe('encodeBookmarklet', () => {
   test('wraps body with javascript: prefix and void(0); suffix', () => {
@@ -643,5 +643,111 @@ describe('shouldFireEpTt', () => {
 
   test('EP Mult enabled but did not get its turn this tick: EP TT is held', () => {
     expect(shouldFireEpTt({ epMultEnabled: true, epMultHadTurnThisTick: false })).toBe(false);
+  });
+});
+
+describe('isReplAtCap', () => {
+  const dec = (n) => ({ gte: (x) => n >= x });
+
+  test('true when a Decimal-like amount is at or above Number.MAX_VALUE', () => {
+    expect(isReplAtCap(dec(Number.MAX_VALUE))).toBe(true);
+    expect(isReplAtCap(dec(Infinity))).toBe(true);
+  });
+
+  test('false when below cap', () => {
+    expect(isReplAtCap(dec(1e300))).toBe(false);
+    expect(isReplAtCap(1e300)).toBe(false);
+  });
+
+  test('handles plain numbers at cap', () => {
+    expect(isReplAtCap(Number.MAX_VALUE)).toBe(true);
+    expect(isReplAtCap(Infinity)).toBe(true);
+  });
+
+  test('false for null, undefined, and non-numeric values', () => {
+    expect(isReplAtCap(null)).toBe(false);
+    expect(isReplAtCap(undefined)).toBe(false);
+    expect(isReplAtCap('nope')).toBe(false);
+  });
+
+  test('false when the Decimal comparison throws', () => {
+    expect(isReplAtCap({ gte: () => { throw new Error('boom'); } })).toBe(false);
+  });
+});
+
+describe('updateReplStability', () => {
+  const empty = { since: null, galaxies: null };
+
+  test('starts the clock when replicanti first hits cap', () => {
+    const out = updateReplStability(empty, { atCap: true, galaxies: 5, now: 1000 });
+    expect(out).toEqual({ since: 1000, galaxies: 5 });
+  });
+
+  test('keeps the original since while cap and galaxy count hold', () => {
+    const s1 = updateReplStability(empty, { atCap: true, galaxies: 5, now: 1000 });
+    const s2 = updateReplStability(s1, { atCap: true, galaxies: 5, now: 4000 });
+    expect(s2).toEqual({ since: 1000, galaxies: 5 });
+  });
+
+  test('clears the clock when replicanti drops below cap', () => {
+    const s1 = updateReplStability(empty, { atCap: true, galaxies: 5, now: 1000 });
+    const s2 = updateReplStability(s1, { atCap: false, galaxies: 5, now: 2000 });
+    expect(s2.since).toBe(null);
+  });
+
+  test('restarts the clock when a replicanti galaxy is bought between samples', () => {
+    const s1 = updateReplStability(empty, { atCap: true, galaxies: 5, now: 1000 });
+    const s2 = updateReplStability(s1, { atCap: true, galaxies: 6, now: 3000 });
+    expect(s2).toEqual({ since: 3000, galaxies: 6 });
+  });
+
+  test('galaxy count of 0 is tracked (not treated as missing)', () => {
+    const s1 = updateReplStability(empty, { atCap: true, galaxies: 0, now: 1000 });
+    const s2 = updateReplStability(s1, { atCap: true, galaxies: 1, now: 2000 });
+    expect(s2.since).toBe(2000);
+  });
+
+  test('missing galaxy probe never restarts the clock', () => {
+    const s1 = updateReplStability(empty, { atCap: true, galaxies: null, now: 1000 });
+    const s2 = updateReplStability(s1, { atCap: true, galaxies: null, now: 5000 });
+    expect(s2.since).toBe(1000);
+  });
+});
+
+describe('shouldBreakInfinity', () => {
+  test('false when infinity is already broken', () => {
+    expect(shouldBreakInfinity({ broken: true, since: 0, now: 99999, stableMs: 1000 })).toBe(false);
+  });
+
+  test('false while no stability clock is running', () => {
+    expect(shouldBreakInfinity({ broken: false, since: null, now: 5000, stableMs: 1000 })).toBe(false);
+  });
+
+  test('false before the window elapses, true at and after it', () => {
+    expect(shouldBreakInfinity({ broken: false, since: 1000, now: 1999, stableMs: 1000 })).toBe(false);
+    expect(shouldBreakInfinity({ broken: false, since: 1000, now: 2000, stableMs: 1000 })).toBe(true);
+    expect(shouldBreakInfinity({ broken: false, since: 1000, now: 9000, stableMs: 1000 })).toBe(true);
+  });
+});
+
+describe('stableMsFromAmount', () => {
+  test('converts seconds to ms', () => {
+    expect(stableMsFromAmount(5)).toBe(5000);
+    expect(stableMsFromAmount('30')).toBe(30000);
+  });
+
+  test('blank or missing amount falls back to the default', () => {
+    expect(stableMsFromAmount(null)).toBe(10000);
+    expect(stableMsFromAmount('')).toBe(10000);
+    expect(stableMsFromAmount('  ')).toBe(10000);
+  });
+
+  test('non-numeric or negative amounts fall back to the default', () => {
+    expect(stableMsFromAmount('abc')).toBe(10000);
+    expect(stableMsFromAmount(-3)).toBe(10000);
+  });
+
+  test('zero means fire immediately at cap', () => {
+    expect(stableMsFromAmount(0)).toBe(0);
   });
 });
