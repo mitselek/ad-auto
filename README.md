@@ -31,6 +31,10 @@ Copy the long `// javascript:...` line under `// START:` in `ad-auto.js` (withou
 
 [`automator/`](./automator/) holds scripts for the in-game Automator (unlocked at first Reality) — eternity/infinity grinds, an EC clearer, a dilation TP farm, and a full Reality loop — plus a cheat sheet of the Automator DSL verified against the game source. See [`automator/README.md`](./automator/README.md).
 
+### Recording a draft from your own play
+
+`tools/action-recorder.js` turns your manual play into a first-draft Automator script. Paste the whole file into the console after mounting the panel, do your actions by hand (crunch, eternity, buy studies, unlock/enter ECs, start dilation, toggle black hole, change autobuyers), then run `__actRec.copy()` to get the assembled DSL. It hooks the same game methods the Automator commands funnel through, so a manual Big Crunch becomes `infinity`, a run of study buys coalesces into one `studies purchase 11,21,…` line, and so on. It is a **literal transcript** — granular dimension-buying / "max all" aren't recordable (autobuyers handle those), and you still add the `wait`/`until` structure by hand. See the header comment in the file.
+
 ## Recorder (verifying behavior)
 
 `tools/auto-recorder.js` is a standalone console tool that wraps the AD methods the TT / EP-Mult autobuyers call and logs only the invocations that actually changed state — with sequence numbers and before/after snapshots, so call order and effects are captured as ground truth rather than described. Paste the whole file into the console after mounting the panel, enable the autobuyers, then run `__autoRec.copy()`. See the header comment in the file for details.
