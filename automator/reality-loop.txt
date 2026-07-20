@@ -6,7 +6,7 @@
 # Repeat toggle: ON.
 
 auto infinity on
-auto eternity 0
+auto eternity 0 ep
 
 # Phase 1: ramp EP until the tree is affordable in one go.
 studies nowait load name TREE
@@ -25,7 +25,7 @@ eternity nowait
 
 # Phase 3: reality once the pending glyph level is worth taking.
 studies nowait load name TREE
-auto eternity 0
+auto eternity 0 ep
 notify "pushing for Reality"
 wait pending glyph level >= 5
 reality nowait

@@ -5,8 +5,8 @@
 
 studies nowait load name TREE
 auto infinity 5s
-auto eternity 0
-# auto eternity 0 fires the moment any EP is available; the wait below
+auto eternity 0 ep
+# auto eternity 0 ep fires the moment any EP is available; the wait below
 # just parks the script until that eternity actually happens, then repeat
 # restarts the loop and re-buys the tree with the fresh EP.
 wait eternity

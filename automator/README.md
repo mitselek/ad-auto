@@ -29,8 +29,8 @@ Verified against the game source (`src/core/automator/`).
 
 ```
 # comment                    // comment
-auto infinity <on|off|10s|x highest|1e100>
-auto eternity <on|off|0>     auto reality <on|off>
+auto infinity <on|off|10s|x highest|1e100 ip>   # amounts need the currency suffix
+auto eternity <on|off|0 ep>  auto reality <on|off|1 rm>
 infinity|eternity|reality [nowait] [respec]   # nowait = don't stall if unavailable
 studies [nowait] purchase <11,22,33 | antimatter|time|active|passive|idle|light|dark>
 studies [nowait] load <id 1-6 | name PRESET>
