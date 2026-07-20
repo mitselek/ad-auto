@@ -1,0 +1,15 @@
+# infinity-grind — rack up infinities for banked-infinity requirements.
+# Stage: any time a Reality/achievement wants lots of (banked) infinities.
+# Setup: save a passive/infinity-oriented tree as preset name GRIND.
+#        Adjust the 1e6 target to taste (or use an Automator constant).
+# Repeat toggle: OFF (one-shot; ends with an eternity to bank them).
+
+studies nowait load name GRIND
+auto eternity off
+auto infinity 5s
+notify "grinding infinities"
+wait infinities >= 1e6
+# TS191 banks a share of your infinities on eternity.
+eternity nowait
+notify "infinity grind done"
+stop

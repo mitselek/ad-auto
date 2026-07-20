@@ -1,0 +1,20 @@
+# dilation-farm — repeated dilated eternities to stack Tachyon Particles.
+# Stage: after dilation is unlocked (or the script buys it for you).
+# Setup: save a dilation tree (131/141-side + TS221 area as available) as
+#        preset name DILATION. Adjust the 10m safety timeout to taste.
+# Repeat toggle: ON — each pass banks TP, exits, and repeat restarts it.
+
+studies respec
+eternity nowait
+studies nowait load name DILATION
+unlock nowait dilation
+start dilation
+auto infinity off
+auto eternity off
+notify "dilated run started"
+# Exit once the run would at least double our TP, or after the timeout —
+# whichever comes first. "pending tp >= tp" compares two currencies.
+pause 30s
+wait pending tp >= tp
+eternity nowait
+notify "banked TP"

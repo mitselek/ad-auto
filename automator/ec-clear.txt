@@ -1,0 +1,97 @@
+# ec-clear — run every Eternity Challenge to 5 completions.
+# Stage: once your EP comfortably clears EC trees (typically each Reality).
+# Setup: save one tree per challenge as presets named EC1 .. EC12
+#        (a single generic EC tree also works — point every load line at it).
+# Repeat toggle: OFF (finishes and stops).
+# Note: ECs must be completed in a sane order; this runs 1 -> 12.
+
+auto infinity on
+auto eternity off
+
+until ec1 completions >= 5 {
+  studies nowait load name EC1
+  unlock nowait ec1
+  start ec1
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec2 completions >= 5 {
+  studies nowait load name EC2
+  unlock nowait ec2
+  start ec2
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec3 completions >= 5 {
+  studies nowait load name EC3
+  unlock nowait ec3
+  start ec3
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec4 completions >= 5 {
+  studies nowait load name EC4
+  unlock nowait ec4
+  start ec4
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec5 completions >= 5 {
+  studies nowait load name EC5
+  unlock nowait ec5
+  start ec5
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec6 completions >= 5 {
+  studies nowait load name EC6
+  unlock nowait ec6
+  start ec6
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec7 completions >= 5 {
+  studies nowait load name EC7
+  unlock nowait ec7
+  start ec7
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec8 completions >= 5 {
+  studies nowait load name EC8
+  unlock nowait ec8
+  start ec8
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec9 completions >= 5 {
+  studies nowait load name EC9
+  unlock nowait ec9
+  start ec9
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec10 completions >= 5 {
+  studies nowait load name EC10
+  unlock nowait ec10
+  start ec10
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec11 completions >= 5 {
+  studies nowait load name EC11
+  unlock nowait ec11
+  start ec11
+  wait pending completions >= 1
+  eternity nowait
+}
+until ec12 completions >= 5 {
+  studies nowait load name EC12
+  unlock nowait ec12
+  start ec12
+  wait pending completions >= 1
+  eternity nowait
+}
+
+notify "all ECs complete"
+stop

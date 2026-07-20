@@ -1,0 +1,31 @@
+# reality-loop — the standard RM/glyph farming cycle:
+#   EP ramp -> dilation TP top-up -> Reality when the glyph level plateaus.
+# Stage: once Realities are routine and you want them unattended.
+# Setup: presets TREE (EP farm) and DILATION (dilation tree) must exist.
+#        GLYPH_LVL is best defined as an Automator constant; a literal works too.
+# Repeat toggle: ON.
+
+auto infinity on
+auto eternity 0
+
+# Phase 1: ramp EP until the tree is affordable in one go.
+studies nowait load name TREE
+notify "ramping EP"
+wait ep >= 1e1500
+
+# Phase 2: a couple of dilated runs to refresh TP.
+studies respec
+eternity nowait
+studies nowait load name DILATION
+unlock nowait dilation
+start dilation
+pause 30s
+wait pending tp >= tp
+eternity nowait
+
+# Phase 3: reality once the pending glyph level is worth taking.
+studies nowait load name TREE
+auto eternity 0
+notify "pushing for Reality"
+wait pending glyph level >= 5
+reality nowait

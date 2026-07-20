@@ -1,0 +1,12 @@
+# eternity-farm — grind eternities and EP as fast as possible.
+# Stage: right after your first Reality, before ECs are worth running.
+# Setup: save your EP-farming tree as preset name TREE (or change the line below).
+# Repeat toggle: ON.
+
+studies nowait load name TREE
+auto infinity 5s
+auto eternity 0
+# auto eternity 0 fires the moment any EP is available; the wait below
+# just parks the script until that eternity actually happens, then repeat
+# restarts the loop and re-buys the tree with the fresh EP.
+wait eternity
