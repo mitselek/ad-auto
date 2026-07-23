@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused, shouldFireEpTt, isReplAtCap, updateReplStability, hasBeenStableFor, stableMsFromAmount, shouldEternityInstead } from '../src/core.mjs';
+import { encodeBookmarklet, decodeBookmarklet, fmtExp, isRunReset, computeRate, isHigherRate, parseDecimalLike, updatePeak, gateCrunch, updateIpMult, isThresholdSet, clampFps, trimWindow, toggleTabEnabled, sanitizeTabMemory, isTabFullyPaused, shouldFireEpTt, isReplAtCap, updateReplStability, hasBeenStableFor, stableMsFromAmount, nextReplAutoState } from '../src/core.mjs';
 
 describe('encodeBookmarklet', () => {
   test('wraps body with javascript: prefix and void(0); suffix', () => {
@@ -752,51 +752,108 @@ describe('stableMsFromAmount', () => {
   });
 });
 
-describe('shouldEternityInstead', () => {
-  const dec = (n) => ({ lte: (x) => n <= Number(x) });
-
-  test('false when eternity is not available, regardless of IP', () => {
-    expect(shouldEternityInstead({ gained: 1, held: 100, canEternity: false })).toBe(false);
-    expect(shouldEternityInstead({ gained: 1, held: 100, canEternity: null })).toBe(false);
+describe('nextReplAutoState', () => {
+  test('autoManage off: nulls baselines, no change, leaves enabled untouched', () => {
+    const out = nextReplAutoState(
+      { realities: 5, ts181: false },
+      { autoManage: false, realities: 6, ts181: true, enabled: true }
+    );
+    expect(out).toEqual({ realities: null, ts181: null, enabled: true, changed: false });
   });
 
-  test('true when the pending gain is at or below held IP', () => {
-    expect(shouldEternityInstead({ gained: 50, held: 100, canEternity: true })).toBe(true);
-    expect(shouldEternityInstead({ gained: 100, held: 100, canEternity: true })).toBe(true);
+  test('autoManage off with disabled row: still no change', () => {
+    const out = nextReplAutoState(
+      { realities: 5, ts181: false },
+      { autoManage: false, realities: 6, ts181: true, enabled: false }
+    );
+    expect(out).toEqual({ realities: null, ts181: null, enabled: false, changed: false });
   });
 
-  test('false when the pending gain still exceeds held IP', () => {
-    expect(shouldEternityInstead({ gained: 200, held: 100, canEternity: true })).toBe(false);
+  test('on, first poll: baselines captured, no change', () => {
+    const out = nextReplAutoState(
+      { realities: null, ts181: null },
+      { autoManage: true, realities: 3, ts181: false, enabled: false }
+    );
+    expect(out).toEqual({ realities: 3, ts181: false, enabled: false, changed: false });
   });
 
-  test('delegates to Decimal-like lte', () => {
-    expect(shouldEternityInstead({ gained: dec(50), held: 100, canEternity: true })).toBe(true);
-    expect(shouldEternityInstead({ gained: dec(200), held: 100, canEternity: true })).toBe(false);
+  test('on, realities increase while disabled: enables', () => {
+    const out = nextReplAutoState(
+      { realities: 3, ts181: false },
+      { autoManage: true, realities: 4, ts181: false, enabled: false }
+    );
+    expect(out).toEqual({ realities: 4, ts181: false, enabled: true, changed: true });
   });
 
-  test('fails closed on missing probes', () => {
-    expect(shouldEternityInstead({ gained: null, held: 100, canEternity: true })).toBe(false);
-    expect(shouldEternityInstead({ gained: 50, held: null, canEternity: true })).toBe(false);
+  test('on, realities increase while already enabled: no change', () => {
+    const out = nextReplAutoState(
+      { realities: 3, ts181: false },
+      { autoManage: true, realities: 4, ts181: false, enabled: true }
+    );
+    expect(out).toEqual({ realities: 4, ts181: false, enabled: true, changed: false });
   });
 
-  test('fails closed when the Decimal comparison throws', () => {
-    expect(shouldEternityInstead({ gained: { lte: () => { throw new Error('boom'); } }, held: 1, canEternity: true })).toBe(false);
+  test('on, TS181 false->true while enabled: disables', () => {
+    const out = nextReplAutoState(
+      { realities: 4, ts181: false },
+      { autoManage: true, realities: 4, ts181: true, enabled: true }
+    );
+    expect(out).toEqual({ realities: 4, ts181: true, enabled: false, changed: true });
   });
 
-  test('fails closed on non-numeric plain values', () => {
-    expect(shouldEternityInstead({ gained: 'nope', held: 100, canEternity: true })).toBe(false);
+  test('on, TS181 already true (true->true): no change', () => {
+    const out = nextReplAutoState(
+      { realities: 4, ts181: true },
+      { autoManage: true, realities: 4, ts181: true, enabled: true }
+    );
+    expect(out).toEqual({ realities: 4, ts181: true, enabled: true, changed: false });
   });
 
-  test('plain gained with Decimal-like held delegates to held.gte', () => {
-    const heldDec = (n) => ({ gte: (x) => n >= Number(x) });
-    expect(shouldEternityInstead({ gained: 50, held: heldDec(100), canEternity: true })).toBe(true);
-    expect(shouldEternityInstead({ gained: 200, held: heldDec(100), canEternity: true })).toBe(false);
+  test('on, TS181 true->false (reset after reality): no change', () => {
+    const out = nextReplAutoState(
+      { realities: 4, ts181: true },
+      { autoManage: true, realities: 4, ts181: false, enabled: true }
+    );
+    expect(out).toEqual({ realities: 4, ts181: false, enabled: true, changed: false });
   });
 
-  test('fails closed when plain values overflow the double range', () => {
-    // both coerce to Infinity — must NOT be read as gained <= held
-    expect(shouldEternityInstead({ gained: '1e500', held: '1e400', canEternity: true })).toBe(false);
-    expect(shouldEternityInstead({ gained: Infinity, held: Infinity, canEternity: true })).toBe(false);
-    expect(shouldEternityInstead({ gained: 50, held: Infinity, canEternity: true })).toBe(false);
+  test('on, TS181 false->true while already disabled: no change', () => {
+    const out = nextReplAutoState(
+      { realities: 4, ts181: false },
+      { autoManage: true, realities: 4, ts181: true, enabled: false }
+    );
+    expect(out).toEqual({ realities: 4, ts181: true, enabled: false, changed: false });
+  });
+
+  test('on, null realities: no toggle, baseline stored as null', () => {
+    const out = nextReplAutoState(
+      { realities: 3, ts181: false },
+      { autoManage: true, realities: null, ts181: false, enabled: false }
+    );
+    expect(out).toEqual({ realities: null, ts181: false, enabled: false, changed: false });
+  });
+
+  test('on, null ts181: no toggle, baseline stored as null', () => {
+    const out = nextReplAutoState(
+      { realities: 4, ts181: false },
+      { autoManage: true, realities: 4, ts181: null, enabled: true }
+    );
+    expect(out).toEqual({ realities: 4, ts181: null, enabled: true, changed: false });
+  });
+
+  test('on, prev realities null: reality increase not detected this poll', () => {
+    const out = nextReplAutoState(
+      { realities: null, ts181: false },
+      { autoManage: true, realities: 4, ts181: false, enabled: false }
+    );
+    expect(out).toEqual({ realities: 4, ts181: false, enabled: false, changed: false });
+  });
+
+  test('on, both events one poll: net disabled', () => {
+    const out = nextReplAutoState(
+      { realities: 3, ts181: false },
+      { autoManage: true, realities: 4, ts181: true, enabled: false }
+    );
+    expect(out).toEqual({ realities: 4, ts181: true, enabled: false, changed: true });
   });
 });

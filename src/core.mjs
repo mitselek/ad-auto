@@ -216,21 +216,32 @@ export function hasBeenStableFor({ since, now, stableMs }) {
   return now - since >= stableMs;
 }
 
-// Diminishing-returns escape for Repl Crunch: when the pending crunch would gain
-// no more IP than we already hold, the run is stale — eternity instead. Requires
-// the game to report eternity as available; missing probes fail closed (crunch).
-export function shouldEternityInstead({ gained, held, canEternity }) {
-  if (!canEternity) return false;
-  if (gained == null || held == null) return false;
-  if (typeof gained.lte === 'function') {
-    try { return gained.lte(held); } catch { return false; }
+// Auto-manage reducer for the Repl Crunch row: enable on a new reality (realities
+// count increment), disable when Time Study 181 is bought (isBought false -> true).
+//   prev:   { realities, ts181 }                    last-seen baselines (either may be null)
+//   sample: { autoManage, realities, ts181, enabled }
+//   returns { realities, ts181, enabled, changed }
+// When autoManage is off, baselines reset to null (so re-enabling re-baselines
+// cleanly) and the row's own enabled is never touched. Missing (null) probe values
+// store null and produce no toggle that poll. Never throws.
+export function nextReplAutoState(prev, sample) {
+  if (!sample.autoManage) {
+    return { realities: null, ts181: null, enabled: sample.enabled, changed: false };
   }
-  if (typeof held.gte === 'function') {
-    try { return held.gte(gained); } catch { return false; }
+  let enabled = sample.enabled;
+  let changed = false;
+  const realityUp =
+    prev.realities != null && sample.realities != null && sample.realities > prev.realities;
+  if (realityUp && !enabled) {
+    enabled = true;
+    changed = true;
   }
-  const g = Number(gained), h = Number(held);
-  if (!Number.isFinite(g) || !Number.isFinite(h)) return false;
-  return g <= h;
+  const ts181Bought = prev.ts181 === false && sample.ts181 === true;
+  if (ts181Bought && enabled) {
+    enabled = false;
+    changed = true;
+  }
+  return { realities: sample.realities, ts181: sample.ts181, enabled, changed };
 }
 
 // The row's amount is the required stability window in seconds (blank = default).

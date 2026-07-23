@@ -10,7 +10,7 @@
     buyMaxID:           { tab: 'Infinity', label: 'Max IDs',           enabled: false, period: 200,  amount: null },
     buyMaxReplUpgrades: { tab: 'Infinity', label: 'Max Repl Upgrades', enabled: false, period: 200,  amount: null },
     replGalaxy:         { tab: 'Infinity', label: 'Repl Galaxy',       enabled: false, period: 50,   amount: null },
-    replCrunch:         { tab: 'Infinity', label: 'Repl Crunch',       enabled: false, period: 200,  amount: 10, eternityWhenStale: false },
+    replCrunch:         { tab: 'Infinity', label: 'Repl Crunch',       enabled: false, period: 200,  amount: 10, autoManage: false },
     buyMaxIPMult:       { tab: 'Infinity', label: 'Max IPMult',        enabled: false, period: 200,  amount: null },
     eternity:           { tab: 'Infinity', label: 'Eternity',          enabled: false, period: 100,  amount: null },
     buyMaxTD:     { tab: 'Eternity', label: 'Max TDs',     enabled: false, period: 200, amount: null },
@@ -35,8 +35,8 @@
       if (saved.amount === null) config[n].amount = null;
       else if (n === 'crunch' && typeof saved.amount === 'string') config[n].amount = saved.amount;
       else if (typeof saved.amount === 'number') config[n].amount = saved.amount;
-      if (typeof saved.eternityWhenStale === 'boolean' && 'eternityWhenStale' in config[n]) {
-        config[n].eternityWhenStale = saved.eternityWhenStale;
+      if (typeof saved.autoManage === 'boolean' && 'autoManage' in config[n]) {
+        config[n].autoManage = saved.autoManage;
       }
     }
   }
@@ -48,7 +48,7 @@
   let actualFps = 0;
   let crunchReadyAt = null;
   let replStability = { since: null, galaxies: null };
-  let warnedNoCanEternityProbe = false;
+  let replAuto = { realities: null, ts181: null };
   let tickNow = 0;
   let currentTab = null;
   const tabEnabledMemory = {}; // tab -> names enabled before a "disable all" (for restore)
@@ -59,7 +59,7 @@
         v: 1,
         config: Object.fromEntries(Object.entries(config).map(([n, c]) => [n, {
           enabled: c.enabled, period: c.period, amount: c.amount,
-          eternityWhenStale: c.eternityWhenStale,
+          autoManage: c.autoManage,
         }])),
         ui: {
           activeTab: currentTab,
@@ -115,31 +115,6 @@
       buyToMax(RU.interval);
       buyToMax(RU.galaxies);
     },
-    // Companion checkbox behavior: when the pending crunch's IP gain wouldn't
-    // exceed the IP we already hold, the run has gone stale — eternity instead.
-    // If eternity isn't available (or a probe is missing), crunch as usual.
-    replCrunch: () => {
-      const canEternityRaw = resolveRaw(['Player.canEternity', 'player.canEternity']);
-      if (config.replCrunch.eternityWhenStale && canEternityRaw == null && !warnedNoCanEternityProbe) {
-        warnedNoCanEternityProbe = true;
-        console.warn('[auto] replCrunch: eternity-when-stale is on but Player.canEternity was not found in this build; the row will always crunch');
-      }
-      if (config.replCrunch.eternityWhenStale && shouldEternityInstead({
-        gained: resolveRaw(['gainedInfinityPoints']),
-        held: resolveRaw(['Currency.infinityPoints.value', 'player.infinityPoints']),
-        canEternity: !!canEternityRaw,
-      })) {
-        const e = dispatchPaths(handlerPaths.eternity);
-        if (e.fired) {
-          stats.eternity.fires++;
-          console.info('[auto] replCrunch: stale run — fired eternity instead of crunch');
-          return e.result;
-        }
-      }
-      const r = dispatchPaths(handlerPaths.replCrunch);
-      if (!r.fired) throw new Error('[auto] replCrunch: no crunch handler resolved');
-      return r.result;
-    },
   };
 
   function resolveFn(path) {
@@ -175,6 +150,18 @@
     if (!r.fired) throw new Error(`[auto] no handler resolved for ${name}`);
     return r.result;
   }
+  const toNumberOrNull = (v) => {
+    if (v == null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  // TS 181 bought-state: a function call the dotted-path resolver can't express.
+  // Returns null (not false) when the study is unavailable, so a missing probe
+  // never looks like "just purchased".
+  const probeTs181Bought = () => {
+    try { const ts = window.TimeStudy && window.TimeStudy(181); return ts ? !!ts.isBought : null; }
+    catch { return null; }
+  };
 
   const gates = {
     sacrifice: (cfg) => {
@@ -361,6 +348,26 @@
         saveSettings();
       }
     }
+
+    // Repl Crunch auto-manage: runs regardless of the row's enabled state (it is
+    // what flips that state), acting only when autoManage is on.
+    const res = nextReplAutoState(replAuto, {
+      autoManage: config.replCrunch.autoManage,
+      realities:  toNumberOrNull(resolveRaw(['player.realities', 'Currency.realities.value'])),
+      ts181:      probeTs181Bought(),
+      enabled:    config.replCrunch.enabled,
+    });
+    replAuto = { realities: res.realities, ts181: res.ts181 };
+    if (res.changed) {
+      config.replCrunch.enabled = res.enabled;
+      const cb = rowEls.replCrunch?.querySelector('input[data-prop="enabled"]');
+      if (cb) cb.checked = res.enabled;
+      delete tabEnabledMemory[config.replCrunch.tab]; // mirror manual-toggle invalidation
+      refreshPausedTabs();
+      const row = rowEls.replCrunch;
+      if (row) { row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 600); }
+      saveSettings();
+    }
   }, 250);
 
   const PID = '__auto_panel';
@@ -489,8 +496,8 @@
     const hasAmountGate = amountGated.has(name);
     const amtType = name === 'crunch' ? 'text' : 'number';
     const amtAttrs = name === 'crunch' ? 'readonly' : 'min="0" step="1"';
-    const companion = 'eternityWhenStale' in cfg
-      ? `<input type="checkbox" class="companion" data-name="${name}" data-prop="eternityWhenStale" ${cfg.eternityWhenStale ? 'checked' : ''} title="eternity instead, when the crunch would gain no more IP than already held">`
+    const companion = 'autoManage' in cfg
+      ? `<input type="checkbox" class="companion" data-name="${name}" data-prop="autoManage" ${cfg.autoManage ? 'checked' : ''} title="auto-manage: enable on a new reality, disable when Time Study 181 is bought">`
       : '';
     const row = document.createElement('div');
     row.className = 'row';
@@ -598,7 +605,7 @@
           enabled: c.enabled,
           period: c.period,
           amount: c.amount,
-          ...(c.eternityWhenStale !== undefined ? { eternityWhenStale: c.eternityWhenStale } : {}),
+          ...(c.autoManage !== undefined ? { autoManage: c.autoManage } : {}),
           fires: stats[n].fires,
           errs: stats[n].errs,
         }])),
